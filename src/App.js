@@ -5,15 +5,18 @@ class App extends React.Component {
         super();
         this.state = {
             roundsCompleted: 0,
-            humanOccupiedHexes: [],
             zombieHeadHexes: makeZeroesArray(100),
-            zombieOccupiedHexes: [],
+            humanOccupiedHexes: [],
             numZombieArms: 2,
             humanCount: 50,
-            zombieCount: 1
+            zombieCount: 1,
+            humanStartCount: 50,
+            zombieStartCount: 1,
+            zombieLifeLength: [false, 3]
         }
         this.nextRound = this.nextRound.bind(this);
         this.restart = this.restart.bind(this);
+        this.inputChange = this.inputChange.bind(this);
     }
 
     displayBoard(stateObject) {
@@ -78,10 +81,26 @@ class App extends React.Component {
 
     displayControls(stateObject) {
         let theButtons = []
+        let theInputs = []
+        let theStatuses = []
         let nextRoundButtonTextColor = "black"
         if (stateObject.humanCount===0) nextRoundButtonTextColor = "gray"
         if (stateObject.roundsCompleted===0) {
             theButtons = <button onClick={this.nextRound}>start</button>
+            theInputs = [
+                <div className="col-item" key="0">  {/* initial condition settings*/}
+                    <label>Human Start Count</label>
+                    <input type="number" className="num-input" id="human-start-count" defaultValue="50" onChange={this.inputChange}/>
+                </div>,
+                <div className="col-item" key="1">
+                    <label>Zombie Start Count</label>
+                    <input type="number" className="num-input" id="zombie-start-count" defaultValue="1" onChange={this.inputChange}/>
+                </div>,
+                <div className="col-item" key="2">
+                    <label># of Zombie Arms</label>
+                    <input type="number" className="num-input" id="num-zombie-arms" defaultValue="2" onChange={this.inputChange}/>
+                </div>
+            ]
         } else {
             theButtons = [
                 <div className="col-item" key="0">
@@ -91,6 +110,31 @@ class App extends React.Component {
                     <button onClick={this.restart}>restart</button>
                 </div>
             ]
+            theInputs = [
+                <div className="col-item" key="0">
+                        <label>Human Start Count</label>
+                        <input type="number" className="num-input" id="human-start-count-final" style={{color: "gray"}} value={stateObject.humanStartCount} readOnly/>
+                </div>,
+                <div className="col-item" key="1">
+                    <label>Zombie Start Count</label>
+                    <input type="number" className="num-input" id="zombie-start-count-final" style={{color: "gray"}} value={stateObject.zombieStartCount} readOnly/>
+                </div>,
+                <div className="col-item" key="2">
+                    <label># of Zombie Arms</label>
+                    <input type="number" className="num-input" id="num-zombie-arms-final" style={{color: "gray"}} value={stateObject.numZombieArms} readOnly/>
+                </div>
+            ]
+            theStatuses = [
+                <div className="col-item" key="0">
+                    <label>Human Count: {stateObject.humanCount}</label>
+                </div>,
+                <div className="col-item" key="1">
+                    <label>Zombie Count: {stateObject.zombieCount}</label>
+                </div>,
+                <div className="col-item" key="2">
+                    <label>Round #: {stateObject.roundsCompleted}</label>
+                </div>
+            ]
         }
 
         return (
@@ -98,26 +142,11 @@ class App extends React.Component {
                 <div id="col-0" className="column"> {/* buttons*/}
                     {theButtons}
                 </div>
-                <div id="col-1" className="column">   {/* initial condition settings*/}
-                    <div className="col-item">
-                        <label>Human Start Count</label>
-                        <input type="number" className="num-input" defaultValue="50"/>
-                    </div>
-                    <div className="col-item">
-                        <label>Zombie Start Count</label>
-                        <input type="number" className="num-input" defaultValue="1"/>
-                    </div>
+                <div id="col-1" className="column"> {/*initial condition settings*/}
+                    {theInputs}
                 </div>
                 <div id="col-2" className="column">   {/* status*/}
-                    <div className="col-item">
-                        <label>Human Count: {stateObject.humanCount}</label>
-                    </div>
-                    <div className="col-item">
-                        <label>Zombie Count: {stateObject.zombieCount}</label>
-                    </div>
-                    <div className="col-item">
-                        <label>Round #: {stateObject.roundsCompleted}</label>
-                    </div>
+                    {theStatuses}
                 </div>
             </div>
         )
@@ -128,6 +157,10 @@ class App extends React.Component {
         if (stateObject.humanCount===0) return
         let humanCount = stateObject.humanCount
         let zombieCount = stateObject.zombieCount
+        if (stateObject.roundsCompleted===0) {
+            humanCount = stateObject.humanStartCount
+            zombieCount = stateObject.zombieStartCount
+        }
         let humanUnoccupiedHexes = makeCountArray(100)
         let zombieUnoccupiedHexes = makeCountArray(100)
         let humanOccupiedHexes = []
@@ -142,7 +175,7 @@ class App extends React.Component {
 
         for (let i=0; i<zombieCount; i++) {
             if (zombieUnoccupiedHexes.length===0) break;
-            let chosenIndex = randomInteger(0, 99-3*i)
+            let chosenIndex = randomInteger(0, zombieUnoccupiedHexes.length-1)
             let chosenHex = zombieUnoccupiedHexes[chosenIndex]
 
             let surroundingHexes;
@@ -193,6 +226,7 @@ class App extends React.Component {
                     zombieUnoccupiedHexes.findIndex(element => element===theArmHexes[j])
                 )
             }
+            console.log(zombieUnoccupiedHexes)
             zombieUnoccupiedHexes = deleteAtIndex(
                 zombieUnoccupiedHexes,
                 zombieUnoccupiedHexes.findIndex(element => element===chosenHex)
@@ -206,13 +240,9 @@ class App extends React.Component {
         humanCount = humanCount - newInfections
         zombieCount = zombieCount + newInfections
 
-        console.log(zombieHeadHexes)
-        console.log(zombieOccupiedHexes)
-        console.log(zombieUnoccupiedHexes)
         this.setState(
             {
                 humanOccupiedHexes: humanOccupiedHexes.sort((a, b) => a-b),
-                zombieOccupiedHexes: zombieOccupiedHexes,
                 zombieHeadHexes: zombieHeadHexes,
                 roundsCompleted: stateObject.roundsCompleted + 1,
                 zombieCount: zombieCount,
@@ -233,6 +263,12 @@ class App extends React.Component {
                 zombieCount: 1
             }
         )
+    }
+
+    inputChange(e) {
+        if (e.target.id==="human-start-count") this.setState({humanStartCount: Number(e.target.value)})
+        if (e.target.id==="zombie-start-count") this.setState({zombieStartCount: Number(e.target.value)})
+        if (e.target.id==="num-zombie-arms") this.setState({numZombieArms: Number(e.target.value)})
     }
 
     render() {
@@ -276,4 +312,8 @@ export default App;
 //arm count
 //zombie mortality
 //vaxx
-//start counts
+//hotseat
+//zombie spawn options
+//      * random, not full
+//      * random predet spawns
+//input ver

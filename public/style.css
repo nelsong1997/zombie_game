@@ -33,3 +33,7 @@ label {
     display: flex;
     flex-direction: column;
 }
+
+#col-0 {
+    width: 79px;
+}
