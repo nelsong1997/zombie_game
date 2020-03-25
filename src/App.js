@@ -6,8 +6,9 @@ class App extends React.Component {
         this.state = {
             roundsCompleted: 0,
             humanOccupiedHexes: [],
+            zombieHeadHexes: makeZeroesArray(100),
             zombieOccupiedHexes: [],
-            numZombieArms: 3,
+            numZombieArms: 2,
             humanCount: 50,
             zombieCount: 1
         }
@@ -15,10 +16,11 @@ class App extends React.Component {
         this.restart = this.restart.bind(this);
     }
 
-    displayBoard() {
+    displayBoard(stateObject) {
         let theHexagons = []
         let theHumans = []
         let theZombies = []
+        let moreShapes = []
         for (let j=0; j<10; j++) { //j==columns
             let h = 0                   //h pushes column down if it's an even column
             if (j%2) h = Math.sqrt(3)/2
@@ -29,24 +31,37 @@ class App extends React.Component {
                      ${1.5*j+1.5},${k+Math.sqrt(3)} ${1.5*j+.5},${k+Math.sqrt(3)} ${1.5*j},${k+Math.sqrt(3)/2}`
                 theHexagons.push(
                     <polygon
-                        id={"hex-" + (10*j + i)} points={pointsString} key={10*j + i}
+                        id={"hex-" + (10*j + i)} points={pointsString} key={1000*j + 100*i} //1
                         style={{fill: "none", stroke: "black", strokeWidth: ".02"}}
                     />
                 )
-                if (this.state.humanOccupiedHexes.includes(10*j + i)) {
+                if (stateObject.humanOccupiedHexes.includes(10*j + i)) {
                     theHumans.push(
                         <text
-                            x={1.5*j + .55} y={k+1.3}
-                            fontFamily="Arial" fontSize="1.75px" fill="blue" key={10*j+i}>x
+                            x={1.5*j + .55} y={k+1.3} //2
+                            fontFamily="Arial" fontSize="1.75px" fill="blue" key={1000*j+100*i + 1}>x
                         </text>
                     )
                 }
-                if (this.state.zombieOccupiedHexes.includes(10*j + i)) {
+                if (stateObject.zombieHeadHexes[(10*j + i)]) {
+                    for (let x=0; x<stateObject.zombieHeadHexes[(10*j + i)].length; x++) { //3-14
+                        let arm = stateObject.zombieHeadHexes[(10*j + i)][x]
+                        let h2 = 0
+                        if (((arm - arm%10)/10)%2) h2 = Math.sqrt(3)/2
+                        let k2 = (arm%10)*Math.sqrt(3) + h2
+                        moreShapes.push(
+                            <circle
+                                cx={1.5*((arm - arm%10)/10) + .99} cy={k2+.87} r=".4"
+                                stroke="red" strokeWidth=".01" fill="red" opacity=".75" key={1000*j + 100*i + 2*x + 2}
+                            />,
+                            <line
+                                x1={1.5*j + .99} y1={k+.87} x2={1.5*((arm - arm%10)/10) + .99} y2={k2+.87}
+                                style={{stroke: "red", strokeWidth: ".25"}} key={1000*j + 100*i + 2*x + 3} opacity=".75"
+                            />
+                        )
+                    }
                     theZombies.push(
-                        <text
-                            x={1.5*j + .5} y={k+1.32} opacity="0.5"
-                            fontFamily="Arial" fontSize="1.75px" fill="red" key={10*j+i}>o
-                        </text>
+                        <circle cx={1.5*j + .99} cy={k+.87} r=".4" stroke="red" strokeWidth=".01" fill="red" opacity=".75" key={1000*j + 100*i + 15}/> //15
                     )
                 }
             }
@@ -56,18 +71,21 @@ class App extends React.Component {
                 {theHexagons}
                 {theHumans}
                 {theZombies}
+                {moreShapes}
             </svg>
         )
     }
 
     displayControls(stateObject) {
         let theButtons = []
+        let nextRoundButtonTextColor = "black"
+        if (stateObject.humanCount===0) nextRoundButtonTextColor = "gray"
         if (stateObject.roundsCompleted===0) {
             theButtons = <button onClick={this.nextRound}>start</button>
         } else {
             theButtons = [
                 <div className="col-item" key="0">
-                    <button onClick={this.nextRound}>next round</button>
+                    <button onClick={this.nextRound} style={{color: nextRoundButtonTextColor}}>next round</button>
                 </div>,
                 <div className="col-item" key="1">
                     <button onClick={this.restart}>restart</button>
@@ -107,19 +125,23 @@ class App extends React.Component {
 
     nextRound() {
         let stateObject = this.state
+        if (stateObject.humanCount===0) return
         let humanCount = stateObject.humanCount
         let zombieCount = stateObject.zombieCount
         let humanUnoccupiedHexes = makeCountArray(100)
         let zombieUnoccupiedHexes = makeCountArray(100)
         let humanOccupiedHexes = []
         let zombieOccupiedHexes = []
+        let zombieHeadHexes = makeZeroesArray(100)
         for (let i=0; i<humanCount; i++) {
             let chosenIndex = randomInteger(0, 99-i)
             let chosenHex = humanUnoccupiedHexes[chosenIndex]
             humanOccupiedHexes.push(chosenHex)
             humanUnoccupiedHexes = deleteAtIndex(humanUnoccupiedHexes, chosenIndex)
         }
+
         for (let i=0; i<zombieCount; i++) {
+            if (zombieUnoccupiedHexes.length===0) break;
             let chosenIndex = randomInteger(0, 99-3*i)
             let chosenHex = zombieUnoccupiedHexes[chosenIndex]
 
@@ -153,39 +175,45 @@ class App extends React.Component {
             for (let hex of surroundingHexes) {
                 if (hex!==null&&!zombieOccupiedHexes.includes(hex)) armOptions.push(hex)
             }
-            let arm0Index;
-            let arm0Hex;
-            if (armOptions.length>0) {
-                arm0Index = randomInteger(0, armOptions.length - 1)
-                arm0Hex = armOptions[arm0Index]
+            let theArmIndices = []
+            let theArmHexes = []
+            for (let j=0; j<stateObject.numZombieArms; j++) {
+                if (armOptions.length===0) break;
+                theArmIndices[j] = randomInteger(0, armOptions.length - 1)
+                theArmHexes[j] = armOptions[theArmIndices[j]]
+                armOptions = deleteAtIndex(armOptions, theArmIndices[j])
             }
-            armOptions = deleteAtIndex(armOptions, arm0Index)
-            let arm1Index;
-            let arm1Hex;
-            if (armOptions.length>0) {
-                arm1Index = randomInteger(0, armOptions.length - 1)
-                arm1Hex = armOptions[arm1Index]
-            }
+
+            zombieHeadHexes[chosenHex] = theArmHexes
             zombieOccupiedHexes.push(chosenHex)
-            zombieOccupiedHexes.push(arm0Hex)
-            zombieOccupiedHexes.push(arm1Hex)
-            zombieUnoccupiedHexes = deleteAtIndex(zombieUnoccupiedHexes, chosenIndex)
-            zombieUnoccupiedHexes = deleteAtIndex(zombieUnoccupiedHexes, arm0Index)
-            zombieUnoccupiedHexes = deleteAtIndex(zombieUnoccupiedHexes, arm1Index)
+            for (let j=0; j<theArmHexes.length; j++) {
+                zombieOccupiedHexes.push(theArmHexes[j])
+                zombieUnoccupiedHexes = deleteAtIndex(
+                    zombieUnoccupiedHexes,
+                    zombieUnoccupiedHexes.findIndex(element => element===theArmHexes[j])
+                )
+            }
+            zombieUnoccupiedHexes = deleteAtIndex(
+                zombieUnoccupiedHexes,
+                zombieUnoccupiedHexes.findIndex(element => element===chosenHex)
+            )
         }
 
         let newInfections = 0
         for (let hex of zombieOccupiedHexes) {
             if (humanOccupiedHexes.includes(hex)) newInfections++
-            console.log(newInfections)
         }
         humanCount = humanCount - newInfections
         zombieCount = zombieCount + newInfections
 
+        console.log(zombieHeadHexes)
+        console.log(zombieOccupiedHexes)
+        console.log(zombieUnoccupiedHexes)
         this.setState(
             {
                 humanOccupiedHexes: humanOccupiedHexes.sort((a, b) => a-b),
-                zombieOccupiedHexes: zombieOccupiedHexes.sort((a, b) => a-b),
+                zombieOccupiedHexes: zombieOccupiedHexes,
+                zombieHeadHexes: zombieHeadHexes,
                 roundsCompleted: stateObject.roundsCompleted + 1,
                 zombieCount: zombieCount,
                 humanCount: humanCount
@@ -199,7 +227,8 @@ class App extends React.Component {
                 roundsCompleted: 0,
                 humanOccupiedHexes: [],
                 zombieOccupiedHexes: [],
-                numZombieArms: 3,
+                zombieHeadHexes: makeZeroesArray(100),
+                numZombieArms: 2,
                 humanCount: 50,
                 zombieCount: 1
             }
@@ -209,7 +238,7 @@ class App extends React.Component {
     render() {
         return (
             <div id="main">
-                {this.displayBoard()}
+                {this.displayBoard(this.state)}
                 {this.displayControls(this.state)}
             </div>
         )
@@ -231,7 +260,13 @@ function deleteAtIndex(array, index) { //someArray===["apple", "banana", "cheese
 
 function makeCountArray(length) { //makeCountArray(4) => [0,1,2,3]
     let returnArray = []
-    for (let i=0; i<length; i++) returnArray.push(i)
+    for (let i=0; i<length; i++) returnArray[i] = i
+    return returnArray
+}
+
+function makeZeroesArray(length) { //makeZeroesArray(4) => [null, null, null, null]
+    let returnArray = []
+    for (let i=0; i<length; i++) returnArray[i] = 0
     return returnArray
 }
 
