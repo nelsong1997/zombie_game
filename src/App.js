@@ -1,7 +1,5 @@
 import React from 'react';
 
-let variable
-
 class App extends React.Component {
 	constructor() {
         super();
@@ -359,7 +357,77 @@ class App extends React.Component {
                     let numNewArms = numZombieArms - theArmHexes.length
                     suboptimalHexes = deleteAtIndex(suboptimalHexes, chosenIndex)
                     for (let j = 0; j<numNewArms; j++) {           //esc if there aren't enough remaining hexes
-                        theArmHexes.push(suboptimalHexes[randomInteger(0, suboptimalHexes.length)])
+                        if (suboptimalHexes.length>0) {
+                            let chosenArmIndex = randomInteger(0, suboptimalHexes.length - 1)
+                            theArmHexes.push(suboptimalHexes[chosenArmIndex])
+                            suboptimalHexes = deleteAtIndex(suboptimalHexes, chosenArmIndex)
+                        } else {
+                            break;
+                        }
+                    }
+
+                    let surroundingHexes; //we need to figure out which hexes are around the chosenHex so that when one of the new arms is adjacent we know
+                    if (((chosenHex-chosenHex%10)/10)%2) {//if it's an odd column
+                        surroundingHexes = [chosenHex-1, chosenHex+10, chosenHex+11, chosenHex+1, chosenHex-9, chosenHex-10]
+                    } else {                                //even column
+                        surroundingHexes = [chosenHex-1, chosenHex+9, chosenHex+10, chosenHex+1, chosenHex-10, chosenHex-11]
+                    }
+                    if (chosenHex%10===0) {
+                        surroundingHexes[0] = null
+                        if (!(((chosenHex-chosenHex%10)/10)%2)) {  //if it's an even column
+                            surroundingHexes[1] = null
+                            surroundingHexes[5] = null
+                        }   
+                    } else if (chosenHex%10===9) {
+                        surroundingHexes[3] = null
+                        if (((chosenHex-chosenHex%10)/10)%2) { //odd column
+                            surroundingHexes[2] = null
+                            surroundingHexes[4] = null
+                        }
+                    }
+                    if (chosenHex<10) {
+                        surroundingHexes[4] = null
+                        surroundingHexes[5] = null
+                    } else if (chosenHex>=90) {
+                        surroundingHexes[1] = null
+                        surroundingHexes[2] = null
+                    }
+
+                    for (let arm of theArmHexes) {
+                        let newArmHex = arm
+                        while (!surroundingHexes.includes(newArmHex)) {
+                            if (chosenHex%10 < newArmHex%10) { //select up
+                                let selectedHex = newArmHex - 1
+                                if (suboptimalHexes.includes(selectedHex)) newArmHex = selectedHex //if the hex above is empty, just take that one instead
+                                else {
+                                    for (let j=0; j<100; j++) { //check every hex to see which zombie occupies the selected hex (change to not check every hex)
+                                        if (zombieHeadHexes[j][0]===selectedHex || zombieHeadHexes[j][1].includes(selectedHex)) {
+                                            let selectedZombieHexes = zombieHeadHexes[j][1]
+                                            selectedZombieHexes.push(zombieHeadHexes[j][0])
+                                            selectedZombieHexes = selectedZombieHexes.sort((a, b) => a%10 - b%10) //put the hexes in order by furthest up to furthest down
+                                            // delete newArmHex (old) from suboptimalhexes
+                                            suboptimalHexes.push(newArmHex)
+                                            zombieHeadHexes[j] = 0 //delete old zombie from zombieheadhexes
+                                            let newZombieHexes = deleteAtIndex(selectedZombieHexes, 0) //figure out new zombie
+                                            newZombieHexes.push(newArmHex)
+                                            for (let k=0; k<newZombieHexes.length; k++) {
+                                                //if the surrounding hexes include everything other than the hex itself
+                                                //make that value of k the new head, the others are the arms
+                                            }
+                                            //add new zombie to zombieheadhexes
+                                            newArmHex = selectedZombieHexes[0] //our empty hex has moved up (as far up as possible)
+                                        }
+                                    }
+                                }
+                            } else if (chosenHex%10 > newArmHex%10) {
+                                //select down
+                            }
+                            if ((chosenHex - chosenHex%10)/10 < (newArmHex - newArmHex%10)/10) {
+                                //select left
+                            } else if ((chosenHex - chosenHex%10)/10 > (newArmHex - newArmHex%10)/10) {
+                                //select right
+                            }
+                        }
                     }
                     
                 } else {
@@ -454,6 +522,43 @@ function makeCountArray(length) { //makeCountArray(4) => [0,1,2,3]
 function makeZeroesArray(length) { //makeZeroesArray(4) => [null, null, null, null]
     let returnArray = []
     for (let i=0; i<length; i++) returnArray[i] = 0
+    return returnArray
+}
+
+function findSurroundingHexes(hex) {
+    let surroundingHexes;
+    if (((hex-hex%10)/10)%2) {//if it's an odd column
+        surroundingHexes = [hex-1, hex+10, hex+11, hex+1, hex-9, hex-10]
+    } else {                                //even column
+        surroundingHexes = [hex-1, hex+9, hex+10, hex+1, hex-10, hex-11]
+    }
+    if (hex%10===0) { //if it's on the top (get rid of stuff above)
+        surroundingHexes[0] = null
+        if (!(((hex-hex%10)/10)%2)) {  //if it's an even column
+            surroundingHexes[1] = null
+            surroundingHexes[5] = null
+        }   
+    } else if (hex%10===9) { //if it's on the bottom (get rid of stuff below)
+        surroundingHexes[3] = null
+        if (((hex-hex%10)/10)%2) { //odd column
+            surroundingHexes[2] = null
+            surroundingHexes[4] = null
+        }
+    }
+    if (hex<10) { //left side (get rid of stuff on the left)
+        surroundingHexes[4] = null
+        surroundingHexes[5] = null
+    } else if (hex>=90) { //right side (get rid of stuff on the right)
+        surroundingHexes[1] = null
+        surroundingHexes[2] = null
+    }
+
+    let returnArray = []
+    for (let anotherHex of surroundingHexes) {
+        if (anotherHex) {
+            returnArray.push(hex)
+        }
+    }
     return returnArray
 }
 
