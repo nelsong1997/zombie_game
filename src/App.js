@@ -12,11 +12,15 @@ class App extends React.Component {
             zombieCount: 1,
             humanStartCount: 50,
             zombieStartCount: 1,
-            zombieLifeLength: [false, 3]
+            zombieLifeLength: [false, 3],
+            history: []
         }
         this.nextRound = this.nextRound.bind(this);
         this.restart = this.restart.bind(this);
-        this.inputChange = this.inputChange.bind(this);
+
+        this.humanStartCount = React.createRef();
+        this.zombieStartCount = React.createRef();
+        this.numZombieArms = React.createRef();
     }
 
     displayBoard(stateObject) {
@@ -81,26 +85,16 @@ class App extends React.Component {
 
     displayControls(stateObject) {
         let theButtons = []
-        let theInputs = []
-        let theStatuses = []
+        let historyTable = null
+        let historyTableRows = []
         let nextRoundButtonTextColor = "black"
+        let inputTextColor = "gray"
+        let inputReadOnlyStatus = true
         if (stateObject.humanCount===0) nextRoundButtonTextColor = "gray"
         if (stateObject.roundsCompleted===0) {
             theButtons = <button onClick={this.nextRound}>start</button>
-            theInputs = [
-                <div className="col-item" key="0">  {/* initial condition settings*/}
-                    <label>Human Start Count</label>
-                    <input type="number" className="num-input" id="human-start-count" defaultValue="50" onChange={this.inputChange}/>
-                </div>,
-                <div className="col-item" key="1">
-                    <label>Zombie Start Count</label>
-                    <input type="number" className="num-input" id="zombie-start-count" defaultValue="1" onChange={this.inputChange}/>
-                </div>,
-                <div className="col-item" key="2">
-                    <label># of Zombie Arms</label>
-                    <input type="number" className="num-input" id="num-zombie-arms" defaultValue="2" onChange={this.inputChange}/>
-                </div>
-            ]
+            inputTextColor = "black"
+            inputReadOnlyStatus = false
         } else {
             theButtons = [
                 <div className="col-item" key="0">
@@ -110,30 +104,26 @@ class App extends React.Component {
                     <button onClick={this.restart}>restart</button>
                 </div>
             ]
-            theInputs = [
-                <div className="col-item" key="0">
-                        <label>Human Start Count</label>
-                        <input type="number" className="num-input" id="human-start-count-final" style={{color: "gray"}} value={stateObject.humanStartCount} readOnly/>
-                </div>,
-                <div className="col-item" key="1">
-                    <label>Zombie Start Count</label>
-                    <input type="number" className="num-input" id="zombie-start-count-final" style={{color: "gray"}} value={stateObject.zombieStartCount} readOnly/>
-                </div>,
-                <div className="col-item" key="2">
-                    <label># of Zombie Arms</label>
-                    <input type="number" className="num-input" id="num-zombie-arms-final" style={{color: "gray"}} value={stateObject.numZombieArms} readOnly/>
-                </div>
-            ]
-            theStatuses = [
-                <div className="col-item" key="0">
-                    <label>Human Count: {stateObject.humanCount}</label>
-                </div>,
-                <div className="col-item" key="1">
-                    <label>Zombie Count: {stateObject.zombieCount}</label>
-                </div>,
-                <div className="col-item" key="2">
-                    <label>Round #: {stateObject.roundsCompleted}</label>
-                </div>
+            for (let round in stateObject.history) {
+                historyTableRows.push(
+                    <tr key={round}>
+                        <td>{round}</td>
+                        <td>{stateObject.history[round].humanCount}</td>
+                        <td>{stateObject.history[round].zombieCount}</td>
+                    </tr>
+                )
+            }
+            historyTable = [
+                <table key="0">
+                    <tbody>
+                        <tr>
+                            <th>Round #</th>
+                            <th>Human Count</th>
+                            <th>Zombie Count</th>
+                        </tr>
+                        {historyTableRows}
+                    </tbody>
+                </table>
             ]
         }
 
@@ -143,10 +133,30 @@ class App extends React.Component {
                     {theButtons}
                 </div>
                 <div id="col-1" className="column"> {/*initial condition settings*/}
-                    {theInputs}
+                    <div className="col-item" key="0">  {/* initial condition settings*/}
+                        <label>Human Start Count</label>
+                        <input
+                            type="number" className="num-input" id="human-start-count" style={{color: inputTextColor}}
+                            defaultValue="50" ref={this.humanStartCount} readOnly={inputReadOnlyStatus}
+                        />
+                    </div>
+                    <div className="col-item" key="1">
+                        <label>Zombie Start Count</label>
+                        <input
+                            type="number" className="num-input" id="zombie-start-count" style={{color: inputTextColor}}
+                            defaultValue="1" ref={this.zombieStartCount} readOnly={inputReadOnlyStatus}
+                        />
+                    </div>
+                    <div className="col-item" key="2">
+                        <label># of Zombie Arms</label>
+                        <input
+                            type="number" className="num-input" id="num-zombie-arms" style={{color: inputTextColor}}
+                            defaultValue="2" ref={this.numZombieArms} readOnly={inputReadOnlyStatus}
+                        />
+                    </div>
                 </div>
                 <div id="col-2" className="column">   {/* status*/}
-                    {theStatuses}
+                    {historyTable}
                 </div>
             </div>
         )
@@ -157,9 +167,18 @@ class App extends React.Component {
         if (stateObject.humanCount===0) return
         let humanCount = stateObject.humanCount
         let zombieCount = stateObject.zombieCount
+        let numZombieArms = stateObject.numZombieArms
+        let history = this.state.history
         if (stateObject.roundsCompleted===0) {
-            humanCount = stateObject.humanStartCount
-            zombieCount = stateObject.zombieStartCount
+            humanCount = Number(this.humanStartCount.current.value)
+            zombieCount = Number(this.zombieStartCount.current.value)
+            numZombieArms = Number(this.numZombieArms.current.value)
+            history.push(
+                {
+                    humanCount: humanCount,
+                    zombieCount: zombieCount
+                }
+            )
         }
         let humanUnoccupiedHexes = makeCountArray(100)
         let zombieUnoccupiedHexes = makeCountArray(100)
@@ -173,72 +192,205 @@ class App extends React.Component {
             humanUnoccupiedHexes = deleteAtIndex(humanUnoccupiedHexes, chosenIndex)
         }
 
-        for (let i=0; i<zombieCount; i++) {
-            if (zombieUnoccupiedHexes.length===0) break;
-            let chosenIndex = randomInteger(0, zombieUnoccupiedHexes.length-1)
-            let chosenHex = zombieUnoccupiedHexes[chosenIndex]
+        function randomHeadAlgorithm() {
+            //This is the first algorithm for deciding where to put the zombies.
+            //For each zombie:
+            //1. A hex is randomly chosen from the set of hexes which are currently unoccupied by other zombies (including their arms).
+            //2. Unoccupied hexes which surround the chosen head hex are identified.
+            //3. The hexes which will be occupied by the zombie's arms are randomly chosen out of the available surrounding hexes.
+            //4. Lists containing information about where zombies are located are updated.
+            //Importantly, each zombie can only claim *available hexes* around it. If a zombie runs out of available hexes, it will simply have less (or even zero) arms.
+            //This means that sometimes zombies will have less than the selected number of arms when there are no more available spaces around the chosen head.
 
-            let surroundingHexes;
-            if (((chosenHex-chosenHex%10)/10)%2) {//if it's an odd column
-                surroundingHexes = [chosenHex-1, chosenHex+10, chosenHex+11, chosenHex+1, chosenHex-9, chosenHex-10]
-            } else {                                //even column
-                surroundingHexes = [chosenHex-1, chosenHex+9, chosenHex+10, chosenHex+1, chosenHex-10, chosenHex-11]
-            }
-            if (chosenHex%10===0) {
-                surroundingHexes[0] = null
-                if (!(((chosenHex-chosenHex%10)/10)%2)) {  //if it's an even column
-                    surroundingHexes[1] = null
-                    surroundingHexes[5] = null
-                }   
-            } else if (chosenHex%10===9) {
-                surroundingHexes[3] = null
-                if (((chosenHex-chosenHex%10)/10)%2) { //odd column
-                    surroundingHexes[2] = null
-                    surroundingHexes[4] = null
+            for (let i=0; i<zombieCount; i++) {
+                if (zombieUnoccupiedHexes.length===0) break;
+                let chosenIndex = randomInteger(0, zombieUnoccupiedHexes.length-1)
+                let chosenHex = zombieUnoccupiedHexes[chosenIndex]
+    
+                let surroundingHexes;
+                if (((chosenHex-chosenHex%10)/10)%2) {//if it's an odd column
+                    surroundingHexes = [chosenHex-1, chosenHex+10, chosenHex+11, chosenHex+1, chosenHex-9, chosenHex-10]
+                } else {                                //even column
+                    surroundingHexes = [chosenHex-1, chosenHex+9, chosenHex+10, chosenHex+1, chosenHex-10, chosenHex-11]
                 }
-            }
-            if (chosenHex<10) {
-                surroundingHexes[4] = null
-                surroundingHexes[5] = null
-            } else if (chosenHex>=90) {
-                surroundingHexes[1] = null
-                surroundingHexes[2] = null
-            }
-            let armOptions = []
-            for (let hex of surroundingHexes) {
-                if (hex!==null&&!zombieOccupiedHexes.includes(hex)) armOptions.push(hex)
-            }
-            let theArmIndices = []
-            let theArmHexes = []
-            for (let j=0; j<stateObject.numZombieArms; j++) {
-                if (armOptions.length===0) break;
-                theArmIndices[j] = randomInteger(0, armOptions.length - 1)
-                theArmHexes[j] = armOptions[theArmIndices[j]]
-                armOptions = deleteAtIndex(armOptions, theArmIndices[j])
-            }
-
-            zombieHeadHexes[chosenHex] = theArmHexes
-            zombieOccupiedHexes.push(chosenHex)
-            for (let j=0; j<theArmHexes.length; j++) {
-                zombieOccupiedHexes.push(theArmHexes[j])
+                if (chosenHex%10===0) {
+                    surroundingHexes[0] = null
+                    if (!(((chosenHex-chosenHex%10)/10)%2)) {  //if it's an even column
+                        surroundingHexes[1] = null
+                        surroundingHexes[5] = null
+                    }   
+                } else if (chosenHex%10===9) {
+                    surroundingHexes[3] = null
+                    if (((chosenHex-chosenHex%10)/10)%2) { //odd column
+                        surroundingHexes[2] = null
+                        surroundingHexes[4] = null
+                    }
+                }
+                if (chosenHex<10) {
+                    surroundingHexes[4] = null
+                    surroundingHexes[5] = null
+                } else if (chosenHex>=90) {
+                    surroundingHexes[1] = null
+                    surroundingHexes[2] = null
+                }
+                let armOptions = []
+                for (let hex of surroundingHexes) {
+                    if (hex!==null&&!zombieOccupiedHexes.includes(hex)) armOptions.push(hex)
+                }
+                let theArmIndices = []
+                let theArmHexes = []
+                for (let j=0; j<stateObject.numZombieArms; j++) {
+                    if (armOptions.length===0) break;
+                    theArmIndices[j] = randomInteger(0, armOptions.length - 1)
+                    theArmHexes[j] = armOptions[theArmIndices[j]]
+                    armOptions = deleteAtIndex(armOptions, theArmIndices[j])
+                }
+    
+                zombieHeadHexes[chosenHex] = theArmHexes
+                zombieOccupiedHexes.push(chosenHex)
+                for (let j=0; j<theArmHexes.length; j++) {
+                    zombieOccupiedHexes.push(theArmHexes[j])
+                    zombieUnoccupiedHexes = deleteAtIndex(
+                        zombieUnoccupiedHexes,
+                        zombieUnoccupiedHexes.findIndex(element => element===theArmHexes[j])
+                    )
+                }
                 zombieUnoccupiedHexes = deleteAtIndex(
                     zombieUnoccupiedHexes,
-                    zombieUnoccupiedHexes.findIndex(element => element===theArmHexes[j])
+                    zombieUnoccupiedHexes.findIndex(element => element===chosenHex)
                 )
             }
-            console.log(zombieUnoccupiedHexes)
-            zombieUnoccupiedHexes = deleteAtIndex(
-                zombieUnoccupiedHexes,
-                zombieUnoccupiedHexes.findIndex(element => element===chosenHex)
-            )
         }
 
+        function slideAlgorithm() {
+            //This algorithm works similarly to the random head algorithm, with some changes that slow it down,
+            //but enable zombies to always have the maximum number of arms, so long as the selected number of arms is 0-2.
+            //Differences:
+            // * Once a spot for a head is chosen, if there is not a sufficient number of surrounding hexes available,
+            //   that hex is added to a new list of suboptimal hexes. A new head hex is chosen randomly that is neither occupied
+            //   nor on this new list.
+            // * Eventually, unoccupied hexes that are not on the suboptimal list will run out. at that point, a head is chosen along with
+            //   two random arms. Zombies in between each arm and the head are progressively moved out of the way so that the arm hexes can move
+            //   into contact with the head until they are adjacent.
+            // * Once the arm hexes and head hex are adjacent, the new zombie is placed.
+            // Importantly, zombies can always be slid out of the way if their arm count is less than 3. With 3 or more arms, the algorithm will not always work
+            // and therefore shouldn't be used (zombies with more arms sometimes can't slide cleanly out of the way without disrupting other zombies).
+
+            let suboptimalHexes = []
+            let breakFlag = false
+            function slideAlgorithmInner() {
+                if (zombieUnoccupiedHexes.length>0) {
+                    //Choose head hex
+                    let chosenIndex = randomInteger(0, zombieUnoccupiedHexes.length-1)
+                    let chosenHex = zombieUnoccupiedHexes[chosenIndex]
+                    
+                    //identify surrounding hexes
+                    let surroundingHexes;
+                    if (((chosenHex-chosenHex%10)/10)%2) {//if it's an odd column
+                        surroundingHexes = [chosenHex-1, chosenHex+10, chosenHex+11, chosenHex+1, chosenHex-9, chosenHex-10]
+                    } else {                                //even column
+                        surroundingHexes = [chosenHex-1, chosenHex+9, chosenHex+10, chosenHex+1, chosenHex-10, chosenHex-11]
+                    }
+                    if (chosenHex%10===0) {
+                        surroundingHexes[0] = null
+                        if (!(((chosenHex-chosenHex%10)/10)%2)) {  //if it's an even column
+                            surroundingHexes[1] = null
+                            surroundingHexes[5] = null
+                        }   
+                    } else if (chosenHex%10===9) {
+                        surroundingHexes[3] = null
+                        if (((chosenHex-chosenHex%10)/10)%2) { //odd column
+                            surroundingHexes[2] = null
+                            surroundingHexes[4] = null
+                        }
+                    }
+                    if (chosenHex<10) {
+                        surroundingHexes[4] = null
+                        surroundingHexes[5] = null
+                    } else if (chosenHex>=90) {
+                        surroundingHexes[1] = null
+                        surroundingHexes[2] = null
+                    }
+                    let armOptions = []
+                    for (let hex of surroundingHexes) {
+                        if (hex!==null&&!zombieOccupiedHexes.includes(hex)) armOptions.push(hex)
+                    }
+    
+                    if (armOptions.length < numZombieArms) {
+                        suboptimalHexes.push([chosenHex, armOptions])
+                        zombieUnoccupiedHexes = deleteAtIndex(
+                            zombieUnoccupiedHexes,
+                            zombieUnoccupiedHexes.findIndex(element => element===chosenHex)
+                        )
+                        slideAlgorithmInner() //start over trying to find a spot for this zombie
+                    }
+    
+                    let theArmIndices = []
+                    let theArmHexes = []
+                    for (let j=0; j<stateObject.numZombieArms; j++) {
+                        if (armOptions.length===0) break;
+                        theArmIndices[j] = randomInteger(0, armOptions.length - 1)
+                        theArmHexes[j] = armOptions[theArmIndices[j]]
+                        armOptions = deleteAtIndex(armOptions, theArmIndices[j])
+                    }
+        
+                    zombieHeadHexes[chosenHex] = theArmHexes
+                    zombieOccupiedHexes.push(chosenHex)
+                    for (let j=0; j<theArmHexes.length; j++) {
+                        zombieOccupiedHexes.push(theArmHexes[j])
+                        zombieUnoccupiedHexes = deleteAtIndex(
+                            zombieUnoccupiedHexes,
+                            zombieUnoccupiedHexes.findIndex(element => element===theArmHexes[j])
+                        )
+                    }
+                    zombieUnoccupiedHexes = deleteAtIndex(
+                        zombieUnoccupiedHexes,
+                        zombieUnoccupiedHexes.findIndex(element => element===chosenHex)
+                    )
+
+                } else if (suboptimalHexes.length > 0) { //the only hexes left are suboptimal
+                    //move the hexes together
+                    //Choose head hex
+                    let chosenIndex = randomInteger(0, suboptimalHexes.length-1)
+                    let chosenHex = suboptimalHexes[chosenIndex][0]
+                    let theArmHexes = suboptimalHexes[chosenIndex][1]
+                    let numNewArms = numZombieArms - theArmHexes.length
+                    suboptimalHexes = deleteAtIndex(suboptimalHexes, chosenIndex)
+                    for (let j = 0; j<numNewArms; j++) {           //esc if there aren't enough remaining hexes
+                        theArmHexes.push(suboptimalHexes[randomInteger(0, suboptimalHexes.length)])
+                    }
+                    
+                } else {
+                    breakFlag = true
+                }
+            }
+
+            
+            for (let i=0; i<zombieCount; i++) {
+                if (!breakFlag) {
+                    slideAlgorithmInner()
+                } else {
+                    break;
+                }
+            }
+        }
+        //------//
+        randomHeadAlgorithm()
+
+        //---//
         let newInfections = 0
         for (let hex of zombieOccupiedHexes) {
             if (humanOccupiedHexes.includes(hex)) newInfections++
         }
         humanCount = humanCount - newInfections
         zombieCount = zombieCount + newInfections
+        history.push(
+            {
+                humanCount: humanCount,
+                zombieCount: zombieCount,
+                newInfections: newInfections
+            }
+        )
 
         this.setState(
             {
@@ -246,7 +398,9 @@ class App extends React.Component {
                 zombieHeadHexes: zombieHeadHexes,
                 roundsCompleted: stateObject.roundsCompleted + 1,
                 zombieCount: zombieCount,
-                humanCount: humanCount
+                humanCount: humanCount,
+                numZombieArms: numZombieArms,
+                history: history
             }
         )
     }
@@ -260,15 +414,10 @@ class App extends React.Component {
                 zombieHeadHexes: makeZeroesArray(100),
                 numZombieArms: 2,
                 humanCount: 50,
-                zombieCount: 1
+                zombieCount: 1,
+                history: []
             }
         )
-    }
-
-    inputChange(e) {
-        if (e.target.id==="human-start-count") this.setState({humanStartCount: Number(e.target.value)})
-        if (e.target.id==="zombie-start-count") this.setState({zombieStartCount: Number(e.target.value)})
-        if (e.target.id==="num-zombie-arms") this.setState({numZombieArms: Number(e.target.value)})
     }
 
     render() {

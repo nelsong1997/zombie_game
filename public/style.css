@@ -24,7 +24,7 @@ svg {
     margin-top: 5px;
 }
 
-label {
+label, table, th, td {
     font-family: "Arial"
 }
 
@@ -37,3 +37,9 @@ label {
 #col-0 {
     width: 79px;
 }
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+    padding: 3px;
+  }
