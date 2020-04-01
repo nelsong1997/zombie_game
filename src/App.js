@@ -1,5 +1,7 @@
 import React from 'react';
 
+let variable
+
 class App extends React.Component {
 	constructor() {
         super();
