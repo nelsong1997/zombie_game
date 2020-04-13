@@ -291,7 +291,7 @@ class App extends React.Component {
                         if (!zombieOccupiedHexes.includes(hex)) armOptions.push(hex)
                     }
     
-                    if (armOptions.length < numZombieArms) {
+                    if (armOptions.length < numZombieArms) { //if chosenHex is subopt
                         suboptimalHexes.push(chosenHex)
                         zombieUnoccupiedHexes = deleteAtIndex(
                             zombieUnoccupiedHexes,
@@ -312,10 +312,17 @@ class App extends React.Component {
                         zombieOccupiedHexes.push(chosenHex)
                         for (let j=0; j<theArmHexes.length; j++) {
                             zombieOccupiedHexes.push(theArmHexes[j])
-                            zombieUnoccupiedHexes = deleteAtIndex(
-                                zombieUnoccupiedHexes,
-                                zombieUnoccupiedHexes.findIndex(element => element===theArmHexes[j])
-                            )
+                            if (zombieUnoccupiedHexes.includes(theArmHexes[j])) {
+                                zombieUnoccupiedHexes = deleteAtIndex(
+                                    zombieUnoccupiedHexes,
+                                    zombieUnoccupiedHexes.findIndex(element => element===theArmHexes[j])
+                                )
+                            } else if (suboptimalHexes.includes(theArmHexes[j])) {
+                                suboptimalHexes = deleteAtIndex(
+                                    suboptimalHexes,
+                                    suboptimalHexes.findIndex(element => element===theArmHexes[j])
+                                )
+                            }
                         }
                         zombieUnoccupiedHexes = deleteAtIndex(
                             zombieUnoccupiedHexes,
@@ -324,13 +331,13 @@ class App extends React.Component {
                     }
 
                 } else if (suboptimalHexes.length > 0) { //the only hexes left are suboptimal
-                    console.log("trying to move hexes together...")
+                    console.log("trying to move hexes together...", suboptimalHexes)
                     //move the hexes together
                     //Choose head hex
                     let chosenIndex = randomInteger(0, suboptimalHexes.length-1)
                     let chosenHex = suboptimalHexes[chosenIndex]
                     let theArmHexes = []
-                    //consider checking to see if there are any free spaces around the head
+                    //change: consider checking to see if there are any free spaces around the head
                     suboptimalHexes = deleteAtIndex(suboptimalHexes, chosenIndex)
                     for (let j = 0; j<numZombieArms; j++) {            //randomly choose new arms
                         if (suboptimalHexes.length>0) { //esc if there aren't enough remaining hexes
@@ -343,8 +350,74 @@ class App extends React.Component {
                     }
                     let surroundingHexes = findSurroundingHexes(chosenHex)
                     let finalArmHexes = []
+
+                    function chooseNewHead(oldHead, armsArray) {
+                        let numArms = armsArray.length
+                        let theHexes = armsArray
+                        theHexes.push(oldHead)
+                    
+                        let count = 0
+                        let newArms = []
+                        for (let hex of theHexes) {
+                            count = 0
+                            newArms = []
+                            let theSurroundingHexes = findSurroundingHexes(hex)
+                            for (let otherHex of theHexes) {
+                                if (hex!==otherHex && theSurroundingHexes.includes(otherHex)) {
+                                    count++
+                                    newArms.push(otherHex)
+                                }
+                            }
+                            if (count===numArms) {
+                                return [hex, newArms]
+                            }
+                        }
+                        throw (oldHead, armsArray)
+                    }
+
                     for (let arm of theArmHexes) {
                         let newArmHex = arm
+
+                        function moveInDirection(direction) {
+                            let selectNum = 0
+                            if (direction==="up") selectNum = -1
+                            else if (direction==="down") selectNum = 1
+                            else if (direction==="left") selectNum = -10
+                            else if (direction==="right") selectNum = 10
+                            let selectedHex = newArmHex + selectNum
+                            if (suboptimalHexes.includes(selectedHex)) {
+                                suboptimalHexes.push(newArmHex)
+                                newArmHex = selectedHex //if the hex in the direction is empty, just take that one instead
+                            } else if (finalArmHexes.includes(selectedHex)) {
+                                finalArmHexes.push(newArmHex)
+                                let newHeadResult = chooseNewHead(chosenHex, finalArmHexes)
+                                chosenHex = newHeadResult[0]
+                                finalArmHexes = newHeadResult[1]
+                            } else {
+                                for (let j=0; j<100; j++) { //check every hex to see which zombie occupies the selected hex (change to not check every hex)
+                                    if (zombieHeadHexes[j] && (j===selectedHex || zombieHeadHexes[j].includes(selectedHex))) {
+                                        console.log(
+                                            j, zombieHeadHexes[j], newArmHex, chosenHex
+                                        )
+                                        let selectedZombieHexes = arrayCopy(zombieHeadHexes[j])
+                                        selectedZombieHexes.push(j)
+                                        if (direction==="left") selectedZombieHexes = selectedZombieHexes.sort((a, b) => a%10 - b%10)
+                                        else if (direction==="down") selectedZombieHexes = selectedZombieHexes.sort((a, b) => b%10 - a%10)
+                                        else if (direction==="left") selectedZombieHexes = selectedZombieHexes.sort((a, b) => a - b)
+                                        else if (direction==="right") selectedZombieHexes = selectedZombieHexes.sort((a, b) => b - a)
+                                        zombieHeadHexes[j] = 0 //delete old zombie from zombieheadhexes
+                                        //------figure out new zombie
+                                        let newZombieHexes = deleteAtIndex(selectedZombieHexes, 0) //the new zombie will occupy everything but the newly chosen empty hex
+                                        newZombieHexes.push(newArmHex) //including where the old empty hex used to be
+                                        
+                                        let newHeadResult = chooseNewHead(newZombieHexes[0], newZombieHexes.slice(1, newZombieHexes.length))
+                                        zombieHeadHexes[newHeadResult[0]] = newHeadResult[1]
+                                        newArmHex = selectedZombieHexes[0] //our empty hex has moved up (as far up as possible)
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                         console.log(
                             "trying to connect arm hexes: ",
                             theArmHexes,
@@ -357,146 +430,17 @@ class App extends React.Component {
                         while (!surroundingHexes.includes(newArmHex) && x<1000) { //until this empty space is adjacent to the chosen head
                             console.log("while loop")
                             if (chosenHex%10 < newArmHex%10) { //select up
-                                let selectedHex = newArmHex - 1
-                                if (suboptimalHexes.includes(selectedHex)) {
-                                    suboptimalHexes.push(newArmHex)
-                                    newArmHex = selectedHex //if the hex above is empty, just take that one instead
-                                } else {
-                                    for (let j=0; j<100; j++) { //check every hex to see which zombie occupies the selected hex (change to not check every hex)
-                                        if (zombieHeadHexes[j] && (j===selectedHex || zombieHeadHexes[j].includes(selectedHex))) {
-                                            let selectedZombieHexes = zombieHeadHexes[j]
-                                            selectedZombieHexes.push(j)
-                                            selectedZombieHexes = selectedZombieHexes.sort((a, b) => a%10 - b%10) //put the hexes in order by furthest up to furthest down
-                                            zombieHeadHexes[j] = 0 //delete old zombie from zombieheadhexes
-                                            //------figure out new zombie
-                                            let newZombieHexes = deleteAtIndex(selectedZombieHexes, 0) //the new zombie will occupy everything but the newly chosen empty hex
-                                            newZombieHexes.push(newArmHex) //including where the old empty hex used to be
-                                            for (let k=0; k<newZombieHexes.length; k++) { //check every hex to see if it is viable for being the new head
-                                                let armsCount = 0; //by counting how many arms are adjacent to it (we want this to be equal to numZombieArms)
-                                                for (let l=0; l<newZombieHexes.length; l++) { //if the surrounding hexes include everything other than the hex itself
-                                                    if (l!==k && findSurroundingHexes(newZombieHexes[k]).includes(newZombieHexes[l])) {
-                                                        armsCount++
-                                                    }
-                                                }
-                                                if (armsCount===numZombieArms) {
-                                                    zombieHeadHexes[k] = [k, deleteAtIndex(newZombieHexes, k)] //add new zombie to zombieheadhexes
-                                                    //make that value of k the new head, the others are the arms
-                                                    break;
-                                                } else armsCount = 0
-                                            }
-                                            newArmHex = selectedZombieHexes[0] //our empty hex has moved up (as far up as possible)
-                                            break;
-                                        }
-                                    }
-                                }
-                            } else if (chosenHex%10 > newArmHex%10) {
-                                //select down
-                                let selectedHex = newArmHex + 1
-                                if (suboptimalHexes.includes(selectedHex)) {
-                                    suboptimalHexes.push(newArmHex)
-                                    newArmHex = selectedHex //if the hex below is empty, just take that one instead
-                                } else {
-                                    for (let j=0; j<100; j++) { //check every hex to see which zombie occupies the selected hex (change to not check every hex)
-                                        if (zombieHeadHexes[j] && (j===selectedHex || zombieHeadHexes[j].includes(selectedHex))) {
-                                            let selectedZombieHexes = zombieHeadHexes[j]
-                                            selectedZombieHexes.push(j)
-                                            selectedZombieHexes = selectedZombieHexes.sort((a, b) => b%10 - a%10) //put the hexes in order by furthest down to furthest up
-                                            zombieHeadHexes[j] = 0 //delete old zombie from zombieheadhexes
-                                            //------figure out new zombie
-                                            let newZombieHexes = deleteAtIndex(selectedZombieHexes, 0) //the new zombie will occupy everything but the newly chosen empty hex
-                                            newZombieHexes.push(newArmHex) //including where the old empty hex used to be
-                                            for (let k=0; k<newZombieHexes.length; k++) { //check every hex to see if it is viable for being the new head
-                                                let armsCount = 0; //by counting how many arms are adjacent to it (we want this to be equal to numZombieArms)
-                                                for (let l=0; l<newZombieHexes.length; l++) { //if the surrounding hexes include everything other than the hex itself
-                                                    if (l!==k && findSurroundingHexes(newZombieHexes[k]).includes(newZombieHexes[l])) {
-                                                        armsCount++
-                                                    }
-                                                }
-                                                if (armsCount===numZombieArms) {
-                                                    zombieHeadHexes[k] = [k, deleteAtIndex(newZombieHexes, k)] //add new zombie to zombieheadhexes
-                                                    //make that value of k the new head, the others are the arms
-                                                    break;
-                                                } else armsCount = 0
-                                            }
-                                            newArmHex = selectedZombieHexes[0] //our empty hex has moved down (as far up as possible)
-                                            break;
-                                        }
-                                    }
-                                }
+                                moveInDirection("up")
+                            } else if (chosenHex%10 > newArmHex%10) { //down
+                                moveInDirection("down")
                             }
                             if (surroundingHexes.includes(newArmHex)) break; //if after we move up or down we are adjacent, stop moving
                             if ((chosenHex - chosenHex%10)/10 < (newArmHex - newArmHex%10)/10) {
                                 //select left
-                                let selectedHex = newArmHex - 10
-                                if (suboptimalHexes.includes(selectedHex)) {
-                                    suboptimalHexes.push(newArmHex)
-                                    newArmHex = selectedHex //if the hex to the left is empty, just take that one instead
-                                } else {
-                                    for (let j=0; j<100; j++) { //check every hex to see which zombie occupies the selected hex (change to not check every hex)
-                                        if (zombieHeadHexes[j] && (j===selectedHex || zombieHeadHexes[j].includes(selectedHex))) {
-                                            let selectedZombieHexes = zombieHeadHexes[j]
-                                            selectedZombieHexes.push(j)
-                                            selectedZombieHexes = selectedZombieHexes.sort((a, b) => a - b) //put the hexes in order by furthest left to furthest right,
-                                                                                                            //then furthest up to furthest down (this prevents choosing a middle hex,
-                                                                                                            // which can lead to an exception--no possible zombie)
-                                            zombieHeadHexes[j] = 0 //delete old zombie from zombieheadhexes
-                                            //------figure out new zombie
-                                            let newZombieHexes = deleteAtIndex(selectedZombieHexes, 0) //the new zombie will occupy everything but the newly chosen empty hex
-                                            newZombieHexes.push(newArmHex) //including where the old empty hex used to be
-                                            for (let k=0; k<newZombieHexes.length; k++) { //check every hex to see if it is viable for being the new head
-                                                let armsCount = 0; //by counting how many arms are adjacent to it (we want this to be equal to numZombieArms)
-                                                for (let l=0; l<newZombieHexes.length; l++) { //if the surrounding hexes include everything other than the hex itself
-                                                    if (l!==k && findSurroundingHexes(newZombieHexes[k]).includes(newZombieHexes[l])) {
-                                                        armsCount++
-                                                    }
-                                                }
-                                                if (armsCount===numZombieArms) {
-                                                    zombieHeadHexes[k] = [k, deleteAtIndex(newZombieHexes, k)] //add new zombie to zombieheadhexes
-                                                    //make that value of k the new head, the others are the arms
-                                                    break;
-                                                } else armsCount = 0
-                                            }
-                                            newArmHex = selectedZombieHexes[0] //our empty hex has moved left (if >1 hexes are equally far left, it chooses higher hexes)
-                                            break;
-                                        }
-                                    }
-                                }
+                                moveInDirection("left")
                             } else if ((chosenHex - chosenHex%10)/10 > (newArmHex - newArmHex%10)/10) {
                                 //select right
-                                let selectedHex = newArmHex + 10
-                                if (suboptimalHexes.includes(selectedHex)) {
-                                    suboptimalHexes.push(newArmHex)
-                                    newArmHex = selectedHex //if the hex to the right is empty, just take that one instead
-                                } else {
-                                    for (let j=0; j<100; j++) { //check every hex to see which zombie occupies the selected hex (change to not check every hex)
-                                        if (zombieHeadHexes[j] && (j===selectedHex || zombieHeadHexes[j].includes(selectedHex))) {
-                                            let selectedZombieHexes = zombieHeadHexes[j]
-                                            selectedZombieHexes.push(j)
-                                            selectedZombieHexes = selectedZombieHexes.sort((a, b) => b - a) //put the hexes in order by furthest right to furthest left,
-                                                                                                            //then furthest down to furthest up (this prevents choosing a middle hex,
-                                                                                                            // which can lead to an exception--no possible zombie)
-                                            zombieHeadHexes[j] = 0 //delete old zombie from zombieheadhexes
-                                            //------figure out new zombie
-                                            let newZombieHexes = deleteAtIndex(selectedZombieHexes, 0) //the new zombie will occupy everything but the newly chosen empty hex
-                                            newZombieHexes.push(newArmHex) //including where the old empty hex used to be
-                                            for (let k=0; k<newZombieHexes.length; k++) { //check every hex to see if it is viable for being the new head
-                                                let armsCount = 0; //by counting how many arms are adjacent to it (we want this to be equal to numZombieArms)
-                                                for (let l=0; l<newZombieHexes.length; l++) { //if the surrounding hexes include everything other than the hex itself
-                                                    if (l!==k && findSurroundingHexes(newZombieHexes[k]).includes(newZombieHexes[l])) {
-                                                        armsCount++
-                                                    }
-                                                }
-                                                if (armsCount===numZombieArms) {
-                                                    zombieHeadHexes[k] = [k, deleteAtIndex(newZombieHexes, k)] //add new zombie to zombieheadhexes
-                                                    //make that value of k the new head, the others are the arms
-                                                    break;
-                                                } else armsCount = 0
-                                            }
-                                            newArmHex = selectedZombieHexes[0] //our empty hex has moved right (if >1 hexes are equally far right, it chooses lower hexes)
-                                            break;
-                                        }
-                                    }
-                                }
+                                moveInDirection("right")
                             }
                             x++
                         }
@@ -585,6 +529,7 @@ function randomInteger(min, max) {
 }
 
 function deleteAtIndex(array, index) { //someArray===["apple", "banana", "cheese"]; deleteAtIndex(someArray, 1) => ["apple", "cheese"]
+    if (index>=array.length || index<0) throw ("error", array, index)
     return array.slice(0, index).concat(array.slice(index + 1, array.length))
 }
 
@@ -633,6 +578,14 @@ function findSurroundingHexes(hex) {
         if (anotherHex) {
             returnArray.push(anotherHex)
         }
+    }
+    return returnArray
+}
+
+function arrayCopy(array) {
+    let returnArray = []
+    for (let element of array) {
+        returnArray.push(element)
     }
     return returnArray
 }
