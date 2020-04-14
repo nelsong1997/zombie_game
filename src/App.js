@@ -377,42 +377,47 @@ class App extends React.Component {
 
                     for (let arm of theArmHexes) {
                         let newArmHex = arm
+                        console.log("starting with hex:", newArmHex)
 
                         function moveInDirection(direction) {
+                            console.log("moving:", direction, "starting hex:", newArmHex)
                             let selectNum = 0
                             if (direction==="up") selectNum = -1
                             else if (direction==="down") selectNum = 1
                             else if (direction==="left") selectNum = -10
                             else if (direction==="right") selectNum = 10
                             let selectedHex = newArmHex + selectNum
+                            console.log("selected:", selectedHex)
                             if (suboptimalHexes.includes(selectedHex)) {
                                 suboptimalHexes.push(newArmHex)
                                 newArmHex = selectedHex //if the hex in the direction is empty, just take that one instead
+                                console.log("(hex was free)")
                             } else if (finalArmHexes.includes(selectedHex)) {
                                 finalArmHexes.push(newArmHex)
                                 let newHeadResult = chooseNewHead(chosenHex, finalArmHexes)
                                 chosenHex = newHeadResult[0]
                                 finalArmHexes = newHeadResult[1]
+                                console.log("ended: selected previous arm")
                             } else {
                                 for (let j=0; j<100; j++) { //check every hex to see which zombie occupies the selected hex (change to not check every hex)
                                     if (zombieHeadHexes[j] && (j===selectedHex || zombieHeadHexes[j].includes(selectedHex))) {
-                                        console.log(
-                                            j, zombieHeadHexes[j], newArmHex, chosenHex
-                                        )
+                                        console.log("selected zombie head:", j, "arms:", zombieHeadHexes[j])
                                         let selectedZombieHexes = arrayCopy(zombieHeadHexes[j])
                                         selectedZombieHexes.push(j)
                                         if (direction==="left") selectedZombieHexes = selectedZombieHexes.sort((a, b) => a%10 - b%10)
                                         else if (direction==="down") selectedZombieHexes = selectedZombieHexes.sort((a, b) => b%10 - a%10)
                                         else if (direction==="left") selectedZombieHexes = selectedZombieHexes.sort((a, b) => a - b)
                                         else if (direction==="right") selectedZombieHexes = selectedZombieHexes.sort((a, b) => b - a)
+                                        console.log("selectedZombieHexes, sorted:", selectedZombieHexes)
                                         zombieHeadHexes[j] = 0 //delete old zombie from zombieheadhexes
                                         //------figure out new zombie
                                         let newZombieHexes = deleteAtIndex(selectedZombieHexes, 0) //the new zombie will occupy everything but the newly chosen empty hex
                                         newZombieHexes.push(newArmHex) //including where the old empty hex used to be
-                                        
+                                        console.log("selectedZombieHexes:", selectedZombieHexes, "newZombieHexes:", newZombieHexes)
                                         let newHeadResult = chooseNewHead(newZombieHexes[0], newZombieHexes.slice(1, newZombieHexes.length))
                                         zombieHeadHexes[newHeadResult[0]] = newHeadResult[1]
                                         newArmHex = selectedZombieHexes[0] //our empty hex has moved up (as far up as possible)
+                                        console.log("newArmHex:", newArmHex)
                                         break;
                                     }
                                 }
