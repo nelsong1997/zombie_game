@@ -368,20 +368,56 @@ class App extends React.Component {
                         return (setNextArm(numArms))
                     }
 
+                    function mutualSurroundingHexes(hex1, hex2) {
+                        let surroundingHex1 = findSurroundingHexes(hex1)
+                        let surroundingHex2 = findSurroundingHexes(hex2)
+                        for (let hex of surroundingHex1) {
+                            if (surroundingHex2.includes(hex)) return hex
+                        }
+                        return false
+                    }
+
+                    function chooseDirection(currentHex, targetHex) {
+                        if (mutualSurroundingHexes(currentHex, targetHex)) return mutualSurroundingHexes(currentHex, targetHex)
+                        if (targetHex%10 < currentHex%10) return "up"
+                        if (targetHex%10 > currentHex%10) return "down"
+                        if ((targetHex - targetHex%10)/10 < (currentHex - currentHex%10)/10) return "left"
+                        if ((targetHex - targetHex%10)/10 > (currentHex - currentHex%10)/10) return "right"
+                    }
+
+                    function validateCurrentDirection(direction, currentHex, targetHex) {
+                        if (typeof(direction)==="number") return true
+                        if (direction==="up" && targetHex%10 < currentHex%10) return true
+                        if (direction==="down" && targetHex%10 > currentHex%10) return true
+                        if (direction==="left" && (targetHex - targetHex%10)/10 < (currentHex - currentHex%10)/10) return true
+                        if (direction==="right" && (targetHex - targetHex%10)/10 > (currentHex - currentHex%10)/10) return true
+                        return false
+                    }
+
                     for (let k=0; k<theArmHexes.length; k++) {
                         let newArmHex = theArmHexes[k]
+                        console.log(
+                            "trying to connect arm hexes: ",
+                            theArmHexes,
+                            "to chosen head hex:",
+                            chosenHex,
+                            "here are the subopt hexes:",
+                            suboptimalHexes
+                        )
                         theArmHexes[k] = -1
 
                         console.log("starting with hex:", newArmHex)
 
                         function moveInDirection(direction) {
+                            let preselectedHex = null
+                            if (typeof(direction)==="number") preselectedHex = direction
                             console.log("moving:", direction, "starting hex:", newArmHex)
                             let selectNum = 0
                             if (direction==="up") selectNum = -1
                             else if (direction==="down") selectNum = 1
                             else if (direction==="left") selectNum = -10
                             else if (direction==="right") selectNum = 10
-                            let selectedHex = newArmHex + selectNum
+                            let selectedHex = preselectedHex || (newArmHex + selectNum)
                             console.log("selected:", selectedHex)
                             if (suboptimalHexes.includes(selectedHex)) {
                                 suboptimalHexes.push(newArmHex)
@@ -440,43 +476,20 @@ class App extends React.Component {
                                 }
                             }
                         }
-                        console.log(
-                            "trying to connect arm hexes: ",
-                            theArmHexes,
-                            "to chosen head hex:",
-                            chosenHex,
-                            "here are the subopt hexes:",
-                            suboptimalHexes
-                        )
+                        
                         let x = 0
                         while (!surroundingHexes.includes(newArmHex) && x<1000) { //until this empty space is adjacent to the chosen head
                             console.log("while loop")
-                            while (chosenHex%10 < newArmHex%10 && !surroundingHexes.includes(newArmHex)) { //select up
-                                moveInDirection("up")
+                            let theDirection = chooseDirection(newArmHex, chosenHex)
+                            while (validateCurrentDirection(theDirection, newArmHex, chosenHex) && !surroundingHexes.includes(newArmHex)) {
+                                if (x>=1000) {breakFlag = true; break; }
+                                moveInDirection(theDirection)
                                 x++
-                                if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
-                            }
-                            while (chosenHex%10 > newArmHex%10 && !surroundingHexes.includes(newArmHex)) { //down
-                                moveInDirection("down")
-                                x++
-                                if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
-                            } 
-                            while ((chosenHex - chosenHex%10)/10 < (newArmHex - newArmHex%10)/10 && !surroundingHexes.includes(newArmHex)) {
-                                //select left
-                                moveInDirection("left")
-                                x++
-                                if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
-                            }
-                            while ((chosenHex - chosenHex%10)/10 > (newArmHex - newArmHex%10)/10 && !surroundingHexes.includes(newArmHex)) {
-                                //select right
-                                moveInDirection("right")
-                                x++
-                                if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
                             }
                             x++
                         }
                         if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
-                        console.log("nice, we add this arm placement now:", newArmHex)
+                        else console.log("nice, we add this arm placement now:", newArmHex)
                         finalArmHexes.push(newArmHex)
                     }
                     console.log("so our new zombie is at hex", chosenHex, "with arms at", finalArmHexes)
@@ -606,7 +619,7 @@ function findSurroundingHexes(hex) {
 
     let returnArray = []
     for (let anotherHex of surroundingHexes) {
-        if (anotherHex) {
+        if (anotherHex!==null) {
             returnArray.push(anotherHex)
         }
     }
