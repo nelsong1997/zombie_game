@@ -207,35 +207,10 @@ class App extends React.Component {
                 let chosenIndex = randomInteger(0, zombieUnoccupiedHexes.length-1)
                 let chosenHex = zombieUnoccupiedHexes[chosenIndex]
     
-                let surroundingHexes;
-                if (((chosenHex-chosenHex%10)/10)%2) {//if it's an odd column
-                    surroundingHexes = [chosenHex-1, chosenHex+10, chosenHex+11, chosenHex+1, chosenHex-9, chosenHex-10]
-                } else {                                //even column
-                    surroundingHexes = [chosenHex-1, chosenHex+9, chosenHex+10, chosenHex+1, chosenHex-10, chosenHex-11]
-                }
-                if (chosenHex%10===0) {
-                    surroundingHexes[0] = null
-                    if (!(((chosenHex-chosenHex%10)/10)%2)) {  //if it's an even column
-                        surroundingHexes[1] = null
-                        surroundingHexes[5] = null
-                    }   
-                } else if (chosenHex%10===9) {
-                    surroundingHexes[3] = null
-                    if (((chosenHex-chosenHex%10)/10)%2) { //odd column
-                        surroundingHexes[2] = null
-                        surroundingHexes[4] = null
-                    }
-                }
-                if (chosenHex<10) {
-                    surroundingHexes[4] = null
-                    surroundingHexes[5] = null
-                } else if (chosenHex>=90) {
-                    surroundingHexes[1] = null
-                    surroundingHexes[2] = null
-                }
+                let surroundingHexes = findSurroundingHexes(chosenHex)
                 let armOptions = []
                 for (let hex of surroundingHexes) {
-                    if (hex!==null&&!zombieOccupiedHexes.includes(hex)) armOptions.push(hex)
+                    if (!zombieOccupiedHexes.includes(hex)) armOptions.push(hex)
                 }
                 let theArmIndices = []
                 let theArmHexes = []
@@ -351,18 +326,16 @@ class App extends React.Component {
                     let surroundingHexes = findSurroundingHexes(chosenHex)
                     let finalArmHexes = []
 
-                    function chooseNewHead(oldHead, armsArray) {
-                        let numArms = armsArray.length
-                        let theHexes = armsArray
-                        theHexes.push(oldHead)
+                    function arrangeZombie(hexArray) { //takes adjacent hexes and outputs the loc of head and arms.
+                        let numArms = hexArray.length - 1
                     
                         let count = 0
                         let newArms = []
-                        for (let hex of theHexes) {
+                        for (let hex of hexArray) {
                             count = 0
                             newArms = []
                             let theSurroundingHexes = findSurroundingHexes(hex)
-                            for (let otherHex of theHexes) {
+                            for (let otherHex of hexArray) {
                                 if (hex!==otherHex && theSurroundingHexes.includes(otherHex)) {
                                     count++
                                     newArms.push(otherHex)
@@ -372,11 +345,33 @@ class App extends React.Component {
                                 return [hex, newArms]
                             }
                         }
-                        throw (oldHead, armsArray)
+                        return false //the hexes are non-adjacent
                     }
 
-                    for (let arm of theArmHexes) {
-                        let newArmHex = arm
+                    function findViableZombie(reqHex, otherHexes, numArms) { //reqHex must be a part of the final zombie (the old hex that should be left behind)
+                        let currentHexes = [reqHex]
+                        let flag = false
+                        
+                        function setNextArm(armsLeft) {
+                            for (let i=0; i<otherHexes.length; i++) {
+                                if (flag===true) return arrangeZombie(currentHexes)
+                                if (otherHexes[i]!==currentHexes[numArms - armsLeft]) {
+                                    currentHexes[numArms - (armsLeft) + 1] = otherHexes[i]
+                                    if (arrangeZombie(currentHexes) && currentHexes.length===(numArms+1)) {
+                                        flag = true
+                                        return
+                                    }
+                                }
+                                if (armsLeft>1) setNextArm(armsLeft - 1)
+                            }
+                        }
+                        return (setNextArm(numArms))
+                    }
+
+                    for (let k=0; k<theArmHexes.length; k++) {
+                        let newArmHex = theArmHexes[k]
+                        theArmHexes[k] = -1
+
                         console.log("starting with hex:", newArmHex)
 
                         function moveInDirection(direction) {
@@ -391,20 +386,28 @@ class App extends React.Component {
                             if (suboptimalHexes.includes(selectedHex)) {
                                 suboptimalHexes.push(newArmHex)
                                 newArmHex = selectedHex //if the hex in the direction is empty, just take that one instead
+                                suboptimalHexes = deleteAtIndex(suboptimalHexes, suboptimalHexes.findIndex(element => element===selectedHex))
                                 console.log("(hex was free)")
-                            } else if (finalArmHexes.includes(selectedHex)) {
-                                finalArmHexes.push(newArmHex)
-                                let newHeadResult = chooseNewHead(chosenHex, finalArmHexes)
+                            } else if (finalArmHexes.includes(selectedHex)) { //if the selected hex is another arm that is already adjacent to the chosenHex
+                                let newZombieHexes = arrayCopy(finalArmHexes)
+                                newZombieHexes.push(chosenHex, newArmHex)
+                                let newHeadResult = arrangeZombie(newZombieHexes)
                                 chosenHex = newHeadResult[0]
+                                surroundingHexes = findSurroundingHexes(chosenHex)
                                 finalArmHexes = newHeadResult[1]
-                                console.log("ended: selected previous arm")
+                                newArmHex = surroundingHexes[0] //a hacky way of terminating the outer while loop
+                                console.log("ended: selected previous arm. resulting zombie head:", chosenHex, "arms:", finalArmHexes)
+                            } else if (theArmHexes.includes(selectedHex)) {
+                                theArmHexes[theArmHexes.findIndex(element => element===selectedHex)] = newArmHex
+                                newArmHex = selectedHex
+                                console.log("the other arm occupied this hex. now the arms are:", theArmHexes)
                             } else {
                                 for (let j=0; j<100; j++) { //check every hex to see which zombie occupies the selected hex (change to not check every hex)
                                     if (zombieHeadHexes[j] && (j===selectedHex || zombieHeadHexes[j].includes(selectedHex))) {
                                         console.log("selected zombie head:", j, "arms:", zombieHeadHexes[j])
                                         let selectedZombieHexes = arrayCopy(zombieHeadHexes[j])
                                         selectedZombieHexes.push(j)
-                                        if (direction==="left") selectedZombieHexes = selectedZombieHexes.sort((a, b) => a%10 - b%10)
+                                        if (direction==="up") selectedZombieHexes = selectedZombieHexes.sort((a, b) => a%10 - b%10)
                                         else if (direction==="down") selectedZombieHexes = selectedZombieHexes.sort((a, b) => b%10 - a%10)
                                         else if (direction==="left") selectedZombieHexes = selectedZombieHexes.sort((a, b) => a - b)
                                         else if (direction==="right") selectedZombieHexes = selectedZombieHexes.sort((a, b) => b - a)
@@ -414,10 +417,24 @@ class App extends React.Component {
                                         let newZombieHexes = deleteAtIndex(selectedZombieHexes, 0) //the new zombie will occupy everything but the newly chosen empty hex
                                         newZombieHexes.push(newArmHex) //including where the old empty hex used to be
                                         console.log("selectedZombieHexes:", selectedZombieHexes, "newZombieHexes:", newZombieHexes)
-                                        let newHeadResult = chooseNewHead(newZombieHexes[0], newZombieHexes.slice(1, newZombieHexes.length))
-                                        zombieHeadHexes[newHeadResult[0]] = newHeadResult[1]
-                                        newArmHex = selectedZombieHexes[0] //our empty hex has moved up (as far up as possible)
-                                        console.log("newArmHex:", newArmHex)
+                                        let newHeadResult = arrangeZombie(newZombieHexes)
+                                        if (!newHeadResult) {
+                                            console.log("couldn't arrange, trying to findViableZombie...")
+                                            let viableZombie = findViableZombie(newArmHex, selectedZombieHexes, numZombieArms)
+                                            zombieHeadHexes[viableZombie[0]] = viableZombie[1]
+                                            for (let hex of selectedZombieHexes) {
+                                                if (viableZombie[0]!==hex && !viableZombie[1].includes(hex)) {
+                                                    newArmHex = hex
+                                                    break;
+                                                }
+                                            }
+                                            console.log("the new zombie has head", viableZombie[0], "and arms", viableZombie[1])
+                                        } else {
+                                            zombieHeadHexes[newHeadResult[0]] = newHeadResult[1]
+                                            newArmHex = selectedZombieHexes[0] //our empty hex has moved up (as far up as possible)
+                                        }
+
+                                        console.log("newArmHex:", newArmHex, "suboptimalHexes:", suboptimalHexes)
                                         break;
                                     }
                                 }
@@ -434,18 +451,27 @@ class App extends React.Component {
                         let x = 0
                         while (!surroundingHexes.includes(newArmHex) && x<1000) { //until this empty space is adjacent to the chosen head
                             console.log("while loop")
-                            if (chosenHex%10 < newArmHex%10) { //select up
+                            while (chosenHex%10 < newArmHex%10 && !surroundingHexes.includes(newArmHex)) { //select up
                                 moveInDirection("up")
-                            } else if (chosenHex%10 > newArmHex%10) { //down
-                                moveInDirection("down")
+                                x++
+                                if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
                             }
-                            if (surroundingHexes.includes(newArmHex)) break; //if after we move up or down we are adjacent, stop moving
-                            if ((chosenHex - chosenHex%10)/10 < (newArmHex - newArmHex%10)/10) {
+                            while (chosenHex%10 > newArmHex%10 && !surroundingHexes.includes(newArmHex)) { //down
+                                moveInDirection("down")
+                                x++
+                                if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
+                            } 
+                            while ((chosenHex - chosenHex%10)/10 < (newArmHex - newArmHex%10)/10 && !surroundingHexes.includes(newArmHex)) {
                                 //select left
                                 moveInDirection("left")
-                            } else if ((chosenHex - chosenHex%10)/10 > (newArmHex - newArmHex%10)/10) {
+                                x++
+                                if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
+                            }
+                            while ((chosenHex - chosenHex%10)/10 > (newArmHex - newArmHex%10)/10 && !surroundingHexes.includes(newArmHex)) {
                                 //select right
                                 moveInDirection("right")
+                                x++
+                                if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
                             }
                             x++
                         }
@@ -454,7 +480,7 @@ class App extends React.Component {
                         finalArmHexes.push(newArmHex)
                     }
                     console.log("so our new zombie is at hex", chosenHex, "with arms at", finalArmHexes)
-                    // zombieHeadHexes[chosenHex] = finalArmHexes
+                    zombieHeadHexes[chosenHex] = finalArmHexes
                 } else {
                     breakFlag = true
                 }
