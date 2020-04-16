@@ -377,12 +377,26 @@ class App extends React.Component {
                         return false
                     }
 
-                    function chooseDirection(currentHex, targetHex) {
+                    function chooseDirection(currentHex, targetHex, prevDirection) {
+                        console.log("prevDirection in chooseDirection:", prevDirection)
+                        let thePreviousDirection = prevDirection
+                        console.log("huh1", thePreviousDirection)
                         if (mutualSurroundingHexes(currentHex, targetHex)) return mutualSurroundingHexes(currentHex, targetHex)
-                        if (targetHex%10 < currentHex%10) return "up"
-                        if (targetHex%10 > currentHex%10) return "down"
-                        if ((targetHex - targetHex%10)/10 < (currentHex - currentHex%10)/10) return "left"
-                        if ((targetHex - targetHex%10)/10 > (currentHex - currentHex%10)/10) return "right"
+                        if (typeof(thePreviousDirection)==="number") thePreviousDirection = "up"
+
+                        console.log("the previous direction was:", thePreviousDirection)
+
+                        let directions = []
+                        if (thePreviousDirection==="up") directions = ["up", "left", "right", "down"]
+                        if (thePreviousDirection==="down") directions = ["down", "left", "right", "up"]
+                        if (thePreviousDirection==="left") directions = ["left", "up", "down", "right"]
+                        if (thePreviousDirection==="right") directions = ["right", "up", "down", "left"]
+
+                        console.log("so the direction priority is:", directions)
+                        
+                        for (let direction of directions) {
+                            if (validateCurrentDirection(direction, currentHex, targetHex)) return direction
+                        }
                     }
 
                     function validateCurrentDirection(direction, currentHex, targetHex) {
@@ -397,6 +411,7 @@ class App extends React.Component {
                     for (let k=0; k<theArmHexes.length; k++) {
                         let newArmHex = theArmHexes[k]
                         console.log(
+                            "//-----------------//------------------//",
                             "trying to connect arm hexes: ",
                             theArmHexes,
                             "to chosen head hex:",
@@ -478,11 +493,14 @@ class App extends React.Component {
                         }
                         
                         let x = 0
+                        let theDirection = "up"
                         while (!surroundingHexes.includes(newArmHex) && x<1000) { //until this empty space is adjacent to the chosen head
                             console.log("while loop")
-                            let theDirection = chooseDirection(newArmHex, chosenHex)
-                            while (validateCurrentDirection(theDirection, newArmHex, chosenHex) && !surroundingHexes.includes(newArmHex)) {
+                            while (!surroundingHexes.includes(newArmHex)) {
                                 if (x>=1000) {breakFlag = true; break; }
+                                console.log("new theDirection:", theDirection)
+                                let previousDirection = theDirection
+                                theDirection = chooseDirection(newArmHex, chosenHex, previousDirection)
                                 moveInDirection(theDirection)
                                 x++
                             }
