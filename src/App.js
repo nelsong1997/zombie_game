@@ -378,21 +378,14 @@ class App extends React.Component {
                     }
 
                     function chooseDirection(currentHex, targetHex, prevDirection) {
-                        console.log("prevDirection in chooseDirection:", prevDirection)
-                        let thePreviousDirection = prevDirection
-                        console.log("huh1", thePreviousDirection)
-                        if (mutualSurroundingHexes(currentHex, targetHex)) return mutualSurroundingHexes(currentHex, targetHex)
-                        if (typeof(thePreviousDirection)==="number") thePreviousDirection = "up"
-
-                        console.log("the previous direction was:", thePreviousDirection)
-
+                        console.log("prevDirection:", prevDirection)
                         let directions = []
-                        if (thePreviousDirection==="up") directions = ["up", "left", "right", "down"]
-                        if (thePreviousDirection==="down") directions = ["down", "left", "right", "up"]
-                        if (thePreviousDirection==="left") directions = ["left", "up", "down", "right"]
-                        if (thePreviousDirection==="right") directions = ["right", "up", "down", "left"]
+                        if (prevDirection==="up") directions = ["up", "left", "right", "down"]
+                        if (prevDirection==="down") directions = ["down", "left", "right", "up"]
+                        if (prevDirection==="left") directions = ["left", "up", "down", "right"]
+                        if (prevDirection==="right") directions = ["right", "up", "down", "left"]
 
-                        console.log("so the direction priority is:", directions)
+                        console.log("the direction priority is:", directions)
                         
                         for (let direction of directions) {
                             if (validateCurrentDirection(direction, currentHex, targetHex)) return direction
@@ -424,15 +417,13 @@ class App extends React.Component {
                         console.log("starting with hex:", newArmHex)
 
                         function moveInDirection(direction) {
-                            let preselectedHex = null
-                            if (typeof(direction)==="number") preselectedHex = direction
                             console.log("moving:", direction, "starting hex:", newArmHex)
                             let selectNum = 0
                             if (direction==="up") selectNum = -1
                             else if (direction==="down") selectNum = 1
                             else if (direction==="left") selectNum = -10
                             else if (direction==="right") selectNum = 10
-                            let selectedHex = preselectedHex || (newArmHex + selectNum)
+                            let selectedHex = newArmHex + selectNum
                             console.log("selected:", selectedHex)
                             if (suboptimalHexes.includes(selectedHex)) {
                                 suboptimalHexes.push(newArmHex)
@@ -498,7 +489,6 @@ class App extends React.Component {
                             console.log("while loop")
                             while (!surroundingHexes.includes(newArmHex)) {
                                 if (x>=1000) {breakFlag = true; break; }
-                                console.log("new theDirection:", theDirection)
                                 let previousDirection = theDirection
                                 theDirection = chooseDirection(newArmHex, chosenHex, previousDirection)
                                 moveInDirection(theDirection)
@@ -507,8 +497,10 @@ class App extends React.Component {
                             x++
                         }
                         if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
-                        else console.log("nice, we add this arm placement now:", newArmHex)
-                        finalArmHexes.push(newArmHex)
+                        else if (finalArmHexes.length < numZombieArms) {
+                            console.log("nice, we add this arm placement now:", newArmHex)
+                            finalArmHexes.push(newArmHex)
+                        }
                     }
                     console.log("so our new zombie is at hex", chosenHex, "with arms at", finalArmHexes)
                     zombieHeadHexes[chosenHex] = finalArmHexes
