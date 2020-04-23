@@ -306,25 +306,22 @@ class App extends React.Component {
                     }
 
                 } else if (suboptimalHexes.length > 0) { //the only hexes left are suboptimal
-                    console.log("trying to move hexes together...", suboptimalHexes)
+                    console.log("Ran out of optimal hexes. trying to move these hexes together:", suboptimalHexes)
                     //move the hexes together
                     //Choose head hex
                     let chosenIndex = randomInteger(0, suboptimalHexes.length-1)
                     let chosenHex = suboptimalHexes[chosenIndex]
-                    let theArmHexes = []
-                    //change: consider checking to see if there are any free spaces around the head
+                    let chosenArmHexes = []
                     suboptimalHexes = deleteAtIndex(suboptimalHexes, chosenIndex)
                     for (let j = 0; j<numZombieArms; j++) {            //randomly choose new arms
                         if (suboptimalHexes.length>0) { //esc if there aren't enough remaining hexes
                             let chosenArmIndex = randomInteger(0, suboptimalHexes.length - 1)
-                            theArmHexes.push(suboptimalHexes[chosenArmIndex])
+                            chosenArmHexes.push(suboptimalHexes[chosenArmIndex])
                             suboptimalHexes = deleteAtIndex(suboptimalHexes, chosenArmIndex) //the chosen arm hexes aren't "empty" anymore
                         } else {
                             break;
                         }
                     }
-                    let surroundingHexes = findSurroundingHexes(chosenHex)
-                    let finalArmHexes = []
 
                     function arrangeZombie(hexArray) { //takes adjacent hexes and outputs the loc of head and arms.
                         let numArms = hexArray.length - 1
@@ -368,52 +365,37 @@ class App extends React.Component {
                         return (setNextArm(numArms))
                     }
 
-                    function mutualSurroundingHexes(hex1, hex2) {
-                        let surroundingHex1 = findSurroundingHexes(hex1)
-                        let surroundingHex2 = findSurroundingHexes(hex2)
-                        for (let hex of surroundingHex1) {
-                            if (surroundingHex2.includes(hex)) return hex
-                        }
-                        return false
-                    }
+                    function selectHex(currentHex, targetHex) {
+                        let horizontalDifference = hPosition(targetHex) - hPosition(currentHex)
+                        let verticalDifference = vPosition(targetHex) - vPosition(currentHex)
+                        let options = []
+                        if (horizontalDifference > 0) options.push(currentHex + 10) //right
+                        else if (horizontalDifference < 0) options.push(currentHex - 10) //left
+                        if (verticalDifference > 0) options.push(currentHex + 1) //down
+                        else if (verticalDifference < 0) options.push(currentHex - 1) //up
 
-                    function chooseDirection(currentHex, targetHex, prevDirection) {
-                        console.log("prevDirection:", prevDirection)
-                        let directions = []
-                        if (prevDirection==="up") directions = ["up", "left", "right", "down"]
-                        if (prevDirection==="down") directions = ["down", "left", "right", "up"]
-                        if (prevDirection==="left") directions = ["left", "up", "down", "right"]
-                        if (prevDirection==="right") directions = ["right", "up", "down", "left"]
-
-                        console.log("the direction priority is:", directions)
-                        
-                        for (let direction of directions) {
-                            if (validateCurrentDirection(direction, currentHex, targetHex)) return direction
+                        if (options.length===0 || options.length > 2) throw "whoops" //should be length 1 or 2; could be 0 if currentHex===targetHex (shouldnt be an input)
+                        else if (options.length===1) return options[0]
+                        else if (options.length===2) {
+                            if (Math.abs(horizontalDifference) > Math.abs(verticalDifference)) return options[0]
+                            else if (Math.abs(horizontalDifference) < Math.abs(verticalDifference)) return options[1]
+                            else return options[randomInteger(0, 1)] // to make the code zany and whacky, if two options seem equally viable we'll choose randomly between them
+                                                                    //the actual reason is randomness can help prevent some inf loops
                         }
                     }
 
-                    function validateCurrentDirection(direction, currentHex, targetHex) {
-                        if (typeof(direction)==="number") return true
-                        if (direction==="up" && targetHex%10 < currentHex%10) return true
-                        if (direction==="down" && targetHex%10 > currentHex%10) return true
-                        if (direction==="left" && (targetHex - targetHex%10)/10 < (currentHex - currentHex%10)/10) return true
-                        if (direction==="right" && (targetHex - targetHex%10)/10 > (currentHex - currentHex%10)/10) return true
-                        return false
-                    }
+                    function moveHex(currentHex, targetHex, suboptHexes, zombiePositions, finalArms) { //start, target, suboptimalHexes, zombieHeadHexes, finalArmHexes
+                        let returnObject = {
+                            suboptimalHexes: suboptHexes,
+                            zombieHeadHexes: zombiePositions,
+                            finalArmHexes: finalArms
+                        }
+                        let selectedHex = selectHex(currentHex, targetHex)
+                        console.log("starting hex:", currentHex, "target hex:", targetHex, "selected hex:", selectedHex)
 
-                    function moveInDirection(direction, currentHex) {
-                        let newArmHex = currentHex
-                        console.log("moving:", direction, "starting hex:", newArmHex)
-                        let selectNum;
-                        if (direction==="up") selectNum = -1
-                        else if (direction==="down") selectNum = 1
-                        else if (direction==="left") selectNum = -10
-                        else if (direction==="right") selectNum = 10
-                        let selectedHex = newArmHex + selectNum
-                        console.log("selected:", selectedHex)
-                        if (suboptimalHexes.includes(selectedHex)) {
-                            suboptimalHexes.push(newArmHex)
-                            newArmHex = selectedHex //if the hex in the direction is empty, just take that one instead
+                        if (suboptHexes.includes(selectedHex)) {
+                            returnObject.suboptimalHexes.push(currentHex)
+                            returnObject.newHexPosition = selectedHex //if the hex in the direction is empty, just take that one instead
                             suboptimalHexes = deleteAtIndex(suboptimalHexes, suboptimalHexes.findIndex(element => element===selectedHex))
                             console.log("(hex was free)")
                         } else if (finalArmHexes.includes(selectedHex)) { //if the selected hex is another arm that is already adjacent to the chosenHex
@@ -469,6 +451,10 @@ class App extends React.Component {
                         }
                         return newArmHex
                     }
+
+                    let finalArmHexes = []
+                    let currentHeadHex = chosenHex
+                    let currentArmHexes = chosenArmHexes
 
                     for (let k=0; k<theArmHexes.length; k++) {
                         let newArmHex = theArmHexes[k]
@@ -644,6 +630,14 @@ function arrayCopy(array) {
         returnArray.push(element)
     }
     return returnArray
+}
+
+function hPosition(hex) {
+    return (hex - hex%10)/10
+}
+
+function vPosition(hex) {
+    return hex%10
 }
 
 export default App;
