@@ -369,11 +369,11 @@ class App extends React.Component {
                         let horizontalDifference = hPosition(targetHex) - hPosition(currentHex)
                         let verticalDifference = vPosition(targetHex) - vPosition(currentHex)
                         let options = []
-                        if (horizontalDifference > 0) options.push(currentHex + 10) //right
-                        else if (horizontalDifference < 0) options.push(currentHex - 10) //left
-                        if (verticalDifference > 0) options.push(currentHex + 1) //down
-                        else if (verticalDifference < 0) options.push(currentHex - 1) //up
-
+                        if (horizontalDifference > 0) options.push([currentHex + 10, "right"]) //right
+                        else if (horizontalDifference < 0) options.push([currentHex - 10, "left"]) //left
+                        if (verticalDifference > 0) options.push([currentHex + 1, "down"]) //down
+                        else if (verticalDifference < 0) options.push([currentHex - 1, "up"]) //up
+                        console.log("options:", options, "currentHex:", currentHex, "targetHex:", targetHex)
                         if (options.length===0 || options.length > 2) throw "whoops" //should be length 1 or 2; could be 0 if currentHex===targetHex (shouldnt be an input)
                         else if (options.length===1) return options[0]
                         else if (options.length===2) {
@@ -384,114 +384,131 @@ class App extends React.Component {
                         }
                     }
 
-                    function moveHex(currentHex, targetHex, suboptHexes, zombiePositions, finalArms) { //start, target, suboptimalHexes, zombieHeadHexes, finalArmHexes
+                    function moveHex(currentHex, targetHex, suboptHexes, zombiePositions, currentArms) { //start, target, suboptimalHexes, zombieHeadHexes
                         let returnObject = {
                             suboptimalHexes: suboptHexes,
                             zombieHeadHexes: zombiePositions,
-                            finalArmHexes: finalArms
+                            newHexPosition: currentHex,
+                            currentArmHexes: currentArms
                         }
-                        let selectedHex = selectHex(currentHex, targetHex)
-                        console.log("starting hex:", currentHex, "target hex:", targetHex, "selected hex:", selectedHex)
+                        let selectedHexResult = selectHex(currentHex, targetHex)
+                        let selectedHex = selectedHexResult[0]
+                        let direction = selectedHexResult[1]
+                        console.log("starting hex:", currentHex, "target hex:", targetHex, "selected hex:", selectedHex, "direction:", direction)
 
-                        if (suboptHexes.includes(selectedHex)) {
+                        if (suboptHexes.includes(selectedHex)) { //if the hex in the direction is empty, just take that one instead
                             returnObject.suboptimalHexes.push(currentHex)
-                            returnObject.newHexPosition = selectedHex //if the hex in the direction is empty, just take that one instead
-                            suboptimalHexes = deleteAtIndex(suboptimalHexes, suboptimalHexes.findIndex(element => element===selectedHex))
+                            returnObject.newHexPosition = selectedHex 
+                            returnObject.suboptimalHexes = deleteAtIndex(
+                                returnObject.suboptimalHexes, returnObject.suboptimalHexes.findIndex(element => element===selectedHex)
+                            )
                             console.log("(hex was free)")
-                        } else if (finalArmHexes.includes(selectedHex)) { //if the selected hex is another arm that is already adjacent to the chosenHex
-                            let newZombieHexes = arrayCopy(finalArmHexes)
-                            newZombieHexes.push(chosenHex, newArmHex)
-                            let newHeadResult = arrangeZombie(newZombieHexes)
-                            chosenHex = newHeadResult[0]
-                            surroundingHexes = findSurroundingHexes(chosenHex)
-                            finalArmHexes = newHeadResult[1]
-                            newArmHex = surroundingHexes[0] //a hacky way of terminating the outer while loop
-                            console.log("ended: selected previous arm. resulting zombie head:", chosenHex, "arms:", finalArmHexes)
-                        } else if (theArmHexes.includes(selectedHex)) {
-                            theArmHexes[theArmHexes.findIndex(element => element===selectedHex)] = newArmHex
-                            newArmHex = selectedHex
-                            console.log("the other arm occupied this hex. now the arms are:", theArmHexes)
+                        } else if (currentArms.includes(selectedHex)) { //if the selected hex is an arm
+                            //swap them
+                            returnObject.newHexPosition = selectedHex
+                            let armIndex = returnObject.currentArmHexes.findIndex(element => element===selectedHex)
+                            returnObject.currentArmHexes[armIndex] = currentHex
+                            console.log("encountered an arm. now the arms are:", returnObject.currentArmHexes)
                         } else {
-                            for (let j=0; j<100; j++) { //check every hex to see which zombie occupies the selected hex (change to not check every hex)
-                                if (zombieHeadHexes[j] && (j===selectedHex || zombieHeadHexes[j].includes(selectedHex))) {
-                                    console.log("selected zombie head:", j, "arms:", zombieHeadHexes[j])
-                                    let selectedZombieHexes = arrayCopy(zombieHeadHexes[j])
-                                    selectedZombieHexes.push(j)
+                            let aroundSelectedHex = findSurroundingHexes(selectedHex); aroundSelectedHex.push(selectedHex)
+                            for (let headHex of aroundSelectedHex) { //check hexes around the selected hex to look for the head of the selected zombie
+                                if (zombiePositions[headHex] && (headHex===selectedHex || zombiePositions[headHex].includes(selectedHex))) {
+                                    console.log("selected zombie head:", headHex, "arms:", zombiePositions[headHex])
+                                    let selectedZombieHexes = arrayCopy(zombiePositions[headHex])
+                                    selectedZombieHexes.push(headHex)
                                     if (direction==="up") selectedZombieHexes = selectedZombieHexes.sort((a, b) => a%10 - b%10)
                                     else if (direction==="down") selectedZombieHexes = selectedZombieHexes.sort((a, b) => b%10 - a%10)
                                     else if (direction==="left") selectedZombieHexes = selectedZombieHexes.sort((a, b) => a - b)
                                     else if (direction==="right") selectedZombieHexes = selectedZombieHexes.sort((a, b) => b - a)
-                                    console.log("selectedZombieHexes, sorted:", selectedZombieHexes)
-                                    zombieHeadHexes[j] = 0 //delete old zombie from zombieheadhexes
-                                    //------figure out new zombie
+                                    returnObject.zombieHeadHexes[headHex] = 0 //delete old zombie from zombieheadhexes
+                                    //------figure out new zombie--------//
                                     let newZombieHexes = deleteAtIndex(selectedZombieHexes, 0) //the new zombie will occupy everything but the newly chosen empty hex
-                                    newZombieHexes.push(newArmHex) //including where the old empty hex used to be
+                                    newZombieHexes.push(currentHex) //including where the old empty hex used to be
                                     console.log("selectedZombieHexes:", selectedZombieHexes, "newZombieHexes:", newZombieHexes)
                                     let newHeadResult = arrangeZombie(newZombieHexes)
                                     if (!newHeadResult) {
                                         console.log("couldn't arrange, trying to findViableZombie...")
-                                        let viableZombie = findViableZombie(newArmHex, selectedZombieHexes, numZombieArms)
-                                        zombieHeadHexes[viableZombie[0]] = viableZombie[1]
+                                        let viableZombie = findViableZombie(currentHex, selectedZombieHexes, numZombieArms)
+                                        returnObject.zombieHeadHexes[viableZombie[0]] = viableZombie[1]
                                         for (let hex of selectedZombieHexes) {
                                             if (viableZombie[0]!==hex && !viableZombie[1].includes(hex)) {
-                                                newArmHex = hex
+                                                returnObject.newHexPosition = hex
                                                 break;
                                             }
                                         }
                                         console.log("the new zombie has head", viableZombie[0], "and arms", viableZombie[1])
                                     } else {
-                                        zombieHeadHexes[newHeadResult[0]] = newHeadResult[1]
-                                        newArmHex = selectedZombieHexes[0] //our empty hex has moved up (as far up as possible)
+                                        returnObject.zombieHeadHexes[newHeadResult[0]] = newHeadResult[1]
+                                        returnObject.newHexPosition = selectedZombieHexes[0] //our empty hex has moved
                                     }
 
-                                    console.log("newArmHex:", newArmHex, "suboptimalHexes:", suboptimalHexes)
+                                    console.log("newHexPosition:", returnObject.newHexPosition, "suboptimalHexes:", returnObject.suboptimalHexes)
                                     break;
                                 }
                             }
                         }
-                        return newArmHex
+                        return returnObject
                     }
 
-                    let finalArmHexes = []
+                    console.log(
+                        "//-----------------//------------------//",
+                        "trying to connect arm hexes: ",
+                        chosenArmHexes,
+                        "to chosen head hex:",
+                        chosenHex,
+                        "here are the subopt hexes:",
+                        suboptimalHexes
+                        )
+                        
                     let currentHeadHex = chosenHex
                     let currentArmHexes = chosenArmHexes
+                    let surroundingHexes = findSurroundingHexes(chosenHex)
+                    let targetForHead = chosenArmHexes[0]
+                    let allZombieHexes = arrayCopy(chosenArmHexes); allZombieHexes.push(chosenHex)
 
-                    for (let k=0; k<theArmHexes.length; k++) {
-                        let newArmHex = theArmHexes[k]
-                        console.log(
-                            "//-----------------//------------------//",
-                            "trying to connect arm hexes: ",
-                            theArmHexes,
-                            "to chosen head hex:",
-                            chosenHex,
-                            "here are the subopt hexes:",
-                            suboptimalHexes
-                        )
-                        theArmHexes[k] = -1
 
-                        console.log("starting with hex:", newArmHex)
-
-                        let x = 0
-                        let theDirection = "up"
-                        while (!surroundingHexes.includes(newArmHex) && x<1000) { //until this empty space is adjacent to the chosen head
-                            console.log("while loop")
-                            while (!surroundingHexes.includes(newArmHex)) {
-                                if (x>=1000) {breakFlag = true; break; }
-                                let previousDirection = theDirection
-                                theDirection = chooseDirection(newArmHex, chosenHex, previousDirection)
-                                newArmHex = moveInDirection(theDirection)
-                                x++
+                    let x = 0
+                    while (!arrangeZombie(allZombieHexes) && x<1000) { //until
+                        console.log("moving the head...")
+                        let moveHeadResult = moveHex(currentHeadHex, targetForHead, suboptimalHexes, zombieHeadHexes, currentArmHexes)
+                        suboptimalHexes = moveHeadResult.suboptimalHexes
+                        zombieHeadHexes = moveHeadResult.zombieHeadHexes
+                        currentHeadHex = moveHeadResult.newHexPosition
+                        surroundingHexes = findSurroundingHexes(currentHeadHex)
+                        allZombieHexes = arrayCopy(currentArmHexes); allZombieHexes.push(currentHeadHex)
+                        if (arrangeZombie(allZombieHexes)) break
+                        for (let i_=0; i_<currentArmHexes.length; i_++) {
+                            console.log("moving arm #", i_, "which is hex#:", currentArmHexes[i_], "toward currentHeadHex", currentHeadHex)
+                            if (!surroundingHexes.includes(currentArmHexes[i_])) {
+                                let moveArmResult = moveHex(currentArmHexes[i_], currentHeadHex, suboptimalHexes, zombieHeadHexes, currentArmHexes)
+                                suboptimalHexes = moveArmResult.suboptimalHexes
+                                zombieHeadHexes = moveArmResult.zombieHeadHexes
+                                currentArmHexes[i_] = moveArmResult.newHexPosition
+                                allZombieHexes = arrayCopy(currentArmHexes); allZombieHexes.push(currentHeadHex)
+                                if (arrangeZombie(allZombieHexes)) break
                             }
-                            x++
                         }
-                        if (x>=1000) {console.log("failure. i was trying to connect stuff but i could not connect arm hex", newArmHex, "to chosen hex", chosenHex); breakFlag = true; break; }
-                        else if (finalArmHexes.length < numZombieArms) {
-                            console.log("nice, we add this arm placement now:", newArmHex)
-                            finalArmHexes.push(newArmHex)
+                        targetForHead = currentArmHexes[0]
+                        if (surroundingHexes.includes(targetForHead)) { //if the head has reached its target, change the target by cycling the arms
+                            console.log("head hex", currentHeadHex, "is adjacent to old target ", targetForHead)
+                            currentArmHexes.push(currentArmHexes[0])
+                            currentArmHexes = currentArmHexes.slice(1, currentArmHexes.length)
                         }
+                        console.log("new targetForHead:", targetForHead)
+                        x++
                     }
-                    console.log("so our new zombie is at hex", chosenHex, "with arms at", finalArmHexes)
-                    zombieHeadHexes[chosenHex] = finalArmHexes
+                    if (x>=1000) {
+                        console.log("inf loop failure. could not connect arm hexes", currentArmHexes, "to current head hex", currentHeadHex)
+                        breakFlag = true
+                    } else {
+                        if (!isASubset(currentArmHexes, surroundingHexes)) {
+                            let arrangeZombieResult = arrangeZombie(allZombieHexes)
+                            currentHeadHex = arrangeZombieResult[0]
+                            currentArmHexes = arrangeZombieResult[1]
+                        }
+                        console.log("success! our new zombie is at hex", currentHeadHex, "with arms at", currentArmHexes)
+                        zombieHeadHexes[currentHeadHex] = currentArmHexes
+                    }
                 } else {
                     breakFlag = true
                 }
@@ -638,6 +655,13 @@ function hPosition(hex) {
 
 function vPosition(hex) {
     return hex%10
+}
+
+function isASubset(smallArray, bigArray) {
+    for (let value of smallArray) {
+        if (!bigArray.includes(value)) return false
+    }
+    return true
 }
 
 export default App;
