@@ -245,8 +245,8 @@ class App extends React.Component {
             //   that hex is added to a new list of suboptimal hexes. A new head hex is chosen randomly that is neither occupied
             //   nor on this new list.
             // * Eventually, unoccupied hexes that are not on the suboptimal list will run out. at that point, a head is chosen along with
-            //   two random arms. Zombies in between each arm and the head are progressively moved out of the way so that the arm hexes can move
-            //   into contact with the head until they are adjacent.
+            //   two random arms from the list of suboptimal hexes. Zombies in between each arm and the head are progressively moved out of the way so
+            //   that the arm hexes can move into contact with the head until they are adjacent.
             // * Once the arm hexes and head hex are adjacent, the new zombie is placed.
             // Importantly, zombies can always be slid out of the way if their arm count is less than 3. With 3 or more arms, the algorithm will not always work
             // and therefore shouldn't be used (zombies with more arms sometimes can't slide cleanly out of the way without disrupting other zombies).
@@ -254,7 +254,7 @@ class App extends React.Component {
             let suboptimalHexes = []
             let breakFlag = false
             function slideAlgorithmInner() {
-                if (zombieUnoccupiedHexes.length>0) {
+                if (zombieUnoccupiedHexes.length>0) { //optimal only phase
                     //Choose head hex
                     let chosenIndex = randomInteger(0, zombieUnoccupiedHexes.length-1)
                     let chosenHex = zombieUnoccupiedHexes[chosenIndex]
@@ -519,6 +519,13 @@ class App extends React.Component {
                     slideAlgorithmInner()
                 } else {
                     break;
+                }
+            }
+            zombieOccupiedHexes = []
+            for (let i=0; i<100; i++) {
+                if (zombieHeadHexes[i]) {
+                    zombieOccupiedHexes.push(i)
+                    zombieOccupiedHexes = zombieOccupiedHexes.concat(zombieHeadHexes[i])
                 }
             }
         }
