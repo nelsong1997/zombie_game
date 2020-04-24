@@ -13,10 +13,12 @@ class App extends React.Component {
             humanStartCount: 50,
             zombieStartCount: 1,
             zombieLifeLength: [false, 3],
-            history: []
+            history: [],
+            currentAlgorithm: "random-head"
         }
         this.nextRound = this.nextRound.bind(this);
         this.restart = this.restart.bind(this);
+        this.handleRadioChange = this.handleRadioChange.bind(this);
 
         this.humanStartCount = React.createRef();
         this.zombieStartCount = React.createRef();
@@ -154,6 +156,38 @@ class App extends React.Component {
                             defaultValue="2" ref={this.numZombieArms} readOnly={inputReadOnlyStatus}
                         />
                     </div>
+                    <div className="col-item" key="3">
+                        <label>Algorithm</label>
+                        <div id="algorithm-select">
+                            <div className="radio">
+                                <label>
+                                    <input
+                                        type="radio" value="random-head" checked={this.state.currentAlgorithm==='random-head'} 
+                                        onChange={this.handleRadioChange}
+                                    />
+                                    Random Head
+                                </label>
+                            </div>
+                            <div className="radio">
+                                <label>
+                                    <input 
+                                        type="radio" value="slide" checked={this.state.currentAlgorithm==='slide'} 
+                                        onChange={this.handleRadioChange}
+                                    />
+                                    Slide
+                                </label>
+                            </div>
+                            <div className="radio">
+                                <label>
+                                    <input 
+                                        type="radio" value="slots" checked={this.state.currentAlgorithm==='slots'}
+                                        onChange={this.handleRadioChange}
+                                    />
+                                    Slots
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div id="col-2" className="column">   {/* status*/}
                     {historyTable}
@@ -162,13 +196,17 @@ class App extends React.Component {
         )
     }
 
+    handleRadioChange(e) {
+        this.setState({currentAlgorithm: e.target.value})
+    }
+
     nextRound() {
         let stateObject = this.state
         if (stateObject.humanCount===0) return
         let humanCount = stateObject.humanCount
         let zombieCount = stateObject.zombieCount
         let numZombieArms = stateObject.numZombieArms
-        let history = this.state.history
+        let history = stateObject.history
         if (stateObject.roundsCompleted===0) {
             humanCount = Number(this.humanStartCount.current.value)
             zombieCount = Number(this.zombieStartCount.current.value)
@@ -191,7 +229,6 @@ class App extends React.Component {
             humanOccupiedHexes.push(chosenHex)
             humanUnoccupiedHexes = deleteAtIndex(humanUnoccupiedHexes, chosenIndex)
         }
-
         function randomHeadAlgorithm() {
             //This is the first algorithm for deciding where to put the zombies.
             //For each zombie:
@@ -253,7 +290,7 @@ class App extends React.Component {
 
             let suboptimalHexes = []
             let breakFlag = false
-            function slideAlgorithmInner() {
+            function placeZombie() {
                 if (zombieUnoccupiedHexes.length>0) { //optimal only phase
                     //Choose head hex
                     let chosenIndex = randomInteger(0, zombieUnoccupiedHexes.length-1)
@@ -272,11 +309,11 @@ class App extends React.Component {
                             zombieUnoccupiedHexes,
                             zombieUnoccupiedHexes.findIndex(element => element===chosenHex)
                         )
-                        slideAlgorithmInner() //start over trying to find a spot for this zombie
+                        placeZombie() //start over trying to find a spot for this zombie
                     } else {
                         let theArmIndices = []
                         let theArmHexes = []
-                        for (let j=0; j<stateObject.numZombieArms; j++) {
+                        for (let j=0; j<numZombieArms; j++) {
                             if (armOptions.length===0) break;
                             theArmIndices[j] = randomInteger(0, armOptions.length - 1)
                             theArmHexes[j] = armOptions[theArmIndices[j]]
@@ -347,22 +384,25 @@ class App extends React.Component {
 
                     function findViableZombie(reqHex, otherHexes, numArms) { //reqHex must be a part of the final zombie (the old hex that should be left behind)
                         let currentHexes = [reqHex]
-                        let flag = false
+                        let returnThis;
+                        let breakFlag = false
                         
                         function setNextArm(armsLeft) {
                             for (let i=0; i<otherHexes.length; i++) {
-                                if (flag===true) return arrangeZombie(currentHexes)
-                                if (otherHexes[i]!==currentHexes[numArms - armsLeft]) {
+                                if (otherHexes[i]!==currentHexes[numArms - armsLeft] && !breakFlag) {
                                     currentHexes[numArms - (armsLeft) + 1] = otherHexes[i]
+                                    console.log(currentHexes, arrangeZombie(currentHexes), currentHexes.length===(numArms+1))
                                     if (arrangeZombie(currentHexes) && currentHexes.length===(numArms+1)) {
-                                        flag = true
-                                        return
+                                        returnThis = arrangeZombie(currentHexes)
+                                        breakFlag = true
+                                        break;
                                     }
                                 }
                                 if (armsLeft>1) setNextArm(armsLeft - 1)
                             }
                         }
-                        return (setNextArm(numArms))
+                        setNextArm(numArms)
+                        return returnThis
                     }
 
                     function selectHex(currentHex, targetHex) {
@@ -373,7 +413,7 @@ class App extends React.Component {
                         else if (horizontalDifference < 0) options.push([currentHex - 10, "left"]) //left
                         if (verticalDifference > 0) options.push([currentHex + 1, "down"]) //down
                         else if (verticalDifference < 0) options.push([currentHex - 1, "up"]) //up
-                        console.log("options:", options, "currentHex:", currentHex, "targetHex:", targetHex)
+                        console.log("currentHex:", currentHex, "targetHex:", targetHex)
                         if (options.length===0 || options.length > 2) throw "whoops" //should be length 1 or 2; could be 0 if currentHex===targetHex (shouldnt be an input)
                         else if (options.length===1) return options[0]
                         else if (options.length===2) {
@@ -516,7 +556,7 @@ class App extends React.Component {
 
             for (let i=0; i<zombieCount; i++) {
                 if (!breakFlag) {
-                    slideAlgorithmInner()
+                    placeZombie()
                 } else {
                     break;
                 }

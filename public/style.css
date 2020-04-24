@@ -43,3 +43,7 @@ table, th, td {
     border-collapse: collapse;
     padding: 3px;
   }
+
+#algorithm-select {
+    margin-top: 5px;
+}
