@@ -44,6 +44,6 @@ table, th, td {
     padding: 3px;
   }
 
-#algorithm-select {
+#algorithm-select, #other-options {
     margin-top: 5px;
 }

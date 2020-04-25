@@ -12,9 +12,14 @@ class App extends React.Component {
             zombieCount: 1,
             humanStartCount: 50,
             zombieStartCount: 1,
-            zombieLifeLength: [false, 3],
             history: [],
-            algorithm: "random-head"
+            algorithm: "random-head",
+            mortality: false,
+            vaccination: false,
+            mortalityNum: 1,
+            vaccinatedCount: 0,
+            vaccinatedStartCount: 0,
+            vaccineEffectiveness: 80
         }
         this.nextRound = this.nextRound.bind(this);
         this.restart = this.restart.bind(this);
@@ -92,23 +97,54 @@ class App extends React.Component {
         if (stateObject.numZombieArms>2) slideButtonColor = "gray"
         let slotsButtonColor = "black"
         if (stateObject.numZombieArms>4) slotsButtonColor = "gray"
+        let mortalityNumInput = null
+        let vaccinationNumInputs = null
         if (stateObject.roundsCompleted===0) {
+            if (stateObject.mortality) { 
+                mortalityNumInput = [
+                    <input
+                        type="number" className="num-input" id="mortality-num" key="0" min="1"
+                        value={stateObject.mortalityNum} name="mortalityNum" onChange={this.handleInputChange}
+                    />
+                ]
+            }
+            if (stateObject.vaccination) { 
+                vaccinationNumInputs = [
+                    <input
+                        type="number" className="num-input" id="vaccinated-start-count" key="0" min="0" max={100-stateObject.humanStartCount}
+                        value={stateObject.vaccinatedStartCount} name="vaccinatedStartCount" onChange={this.handleInputChange}
+                    />,
+                    <input
+                        type="number" className="num-input" id="vaccine-effectiveness" key="0" min="0" max="100"
+                        value={stateObject.vaccineEffectiveness} name="vaccineEffectiveness" onChange={this.handleInputChange}
+                    />
+                ]
+            }
             theButtons = <button onClick={this.nextRound}>start</button>
             theNumInputs = [
                 <input
-                    type="number" className="num-input" id="human-start-count" key="0"
-                    defaultValue="50" name="humanStartCount" onChange={this.handleInputChange}
+                    type="number" className="num-input" id="human-start-count" key="0" min="0" max={100-stateObject.vaccinatedStartCount}
+                    value={stateObject.humanStartCount} name="humanStartCount" onChange={this.handleInputChange}
                 />,
                 <input
-                    type="number" className="num-input" id="zombie-start-count" key="1"
-                    defaultValue="1" name="zombieStartCount" onChange={this.handleInputChange}
+                    type="number" className="num-input" id="zombie-start-count" key="1" min="1" max="100"
+                    value={stateObject.zombieStartCount} name="zombieStartCount" onChange={this.handleInputChange}
                 />,
                 <input
-                    type="number" className="num-input" id="num-zombie-arms" key="2"
-                    defaultValue="2" name="numZombieArms" onChange={this.handleInputChange}
+                    type="number" className="num-input" id="num-zombie-arms" key="2" min="0" max="6"
+                    value={stateObject.numZombieArms} name="numZombieArms" onChange={this.handleInputChange}
                 />
             ]
         } else {
+            if (stateObject.mortality) { 
+                mortalityNumInput = [<label key="0"><strong>{stateObject.mortalityNum}</strong></label>]
+            }
+            if (stateObject.vaccination) { 
+                vaccinationNumInputs = [
+                    <label key="0"><strong>{stateObject.vaccinatedStartCount}</strong></label>,
+                    <label key="1"><strong>{stateObject.vaccineEffectiveness}</strong></label>
+                ]
+            }
             theButtons = [
                 <div className="col-item" key="0">
                     <button onClick={this.nextRound} style={{color: nextRoundButtonTextColor}}>next round</button>
@@ -145,6 +181,28 @@ class App extends React.Component {
                 </table>
             ]
         }
+        let mortalityColItem = null
+        if (stateObject.mortality) {
+            mortalityColItem = [
+                <div className="col-item" key="3">
+                    <label>Zombie Lifespan (days)</label>
+                    {mortalityNumInput}
+                </div>
+            ]
+        }
+        let vaccinationColItems = null
+        if (stateObject.vaccination) {
+            vaccinationColItems = [
+                <div className="col-item" key="4">
+                    <label>Vaccinated Human Start Count</label>
+                    {vaccinationNumInputs[0]}
+                </div>,
+                <div className="col-item" key="5">
+                    <label>% Vaccine Effectiveness</label>
+                    {vaccinationNumInputs[1]}
+                </div>
+            ]
+        }
 
         return (
             <div id="controls">
@@ -164,31 +222,54 @@ class App extends React.Component {
                         <label># of Zombie Arms</label>
                         {theNumInputs[2]}
                     </div>
-                    <div className="col-item" key="3">
+                    {mortalityColItem}
+                    {vaccinationColItems}
+                    <div className="col-item" key="6">
                         <label>Algorithm</label>
                         <div id="algorithm-select">
-                            <div className="radio">
+                            <div>
                                 <label>
                                     <input
-                                        type="radio" value="random-head" checked={this.state.algorithm==='random-head'} 
+                                        type="radio" value="random-head" checked={stateObject.algorithm==='random-head'} 
                                         name="algorithm" onChange={this.handleInputChange}
                                     />Random Head
                                 </label>
                             </div>
-                            <div className="radio">
+                            <div>
                                 <label style={{color: slideButtonColor}}>
                                     <input 
-                                        type="radio" value="slide" checked={this.state.algorithm==='slide'} 
+                                        type="radio" value="slide" checked={stateObject.algorithm==='slide'} 
                                         name="algorithm" onChange={this.handleInputChange}
                                     />Slide
                                 </label>
                             </div>
-                            <div className="radio">
+                            <div>
                                 <label style={{color: slotsButtonColor}}>
                                     <input 
-                                        type="radio" value="slots" checked={this.state.algorithm==='slots'}
+                                        type="radio" value="slots" checked={stateObject.algorithm==='slots'}
                                         name="algorithm" onChange={this.handleInputChange}
                                     />Slots
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="col-item" key="7">
+                        <label>Other Options</label>
+                        <div id="other-options">
+                            <div>
+                                <label>
+                                    <input
+                                        type="checkbox" value={!stateObject.mortality} checked={stateObject.mortality} 
+                                        name="mortality" onChange={this.handleInputChange}
+                                    />Zombie Mortality
+                                </label>
+                            </div>
+                            <div>
+                                <label>
+                                    <input 
+                                        type="checkbox" value={!stateObject.vaccination} checked={stateObject.vaccination} 
+                                        name="vaccination" onChange={this.handleInputChange}
+                                    />Vaccination
                                 </label>
                             </div>
                         </div>
@@ -204,7 +285,18 @@ class App extends React.Component {
     handleInputChange(e) {
         let property = e.target.name
         let value = e.target.value
-        if (Number(value)) value = Number(value)
+        if (e.target.type==="number") {
+            value = Math.abs(Number(value)-Number(value)%1)
+            if (value<e.target.min) value = Number(e.target.min)
+            else if (e.target.max && value>e.target.max) value = Number(e.target.max)
+        }
+        if (e.target.type==="checkbox") {
+            value = (value==="true")
+            if (property==="vaccination" && value) {
+                this.setState({vaccinatedStartCount: 25})
+                if (this.state.humanStartCount>75) this.setState({humanStartCount: 75})
+            } else if (property==="vaccination" && !value) this.setState({vaccinatedStartCount: 0})
+        }
         this.setState({[property]: value})
     }
 
@@ -430,8 +522,7 @@ class App extends React.Component {
                         if (verticalDifference > 0) options.push([currentHex + 1, "down"]) //down
                         else if (verticalDifference < 0) options.push([currentHex - 1, "up"]) //up
                         console.log("currentHex:", currentHex, "targetHex:", targetHex)
-                        if (options.length===0 || options.length > 2) throw "whoops" //should be length 1 or 2; could be 0 if currentHex===targetHex (shouldnt be an input)
-                        else if (options.length===1) return options[0]
+                        if (options.length===1) return options[0]
                         else if (options.length===2) {
                             if (Math.abs(horizontalDifference) > Math.abs(verticalDifference)) return options[0]
                             else if (Math.abs(horizontalDifference) < Math.abs(verticalDifference)) return options[1]
@@ -826,12 +917,6 @@ function isASubset(smallArray, bigArray) {
 
 export default App;
 
-//history
-//arm count
 //zombie mortality
 //vaxx
 //hotseat
-//zombie spawn options
-//      * random, not full
-//      * random predet spawns
-//input ver
