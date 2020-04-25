@@ -14,15 +14,11 @@ class App extends React.Component {
             zombieStartCount: 1,
             zombieLifeLength: [false, 3],
             history: [],
-            currentAlgorithm: "random-head"
+            algorithm: "random-head"
         }
         this.nextRound = this.nextRound.bind(this);
         this.restart = this.restart.bind(this);
-        this.handleRadioChange = this.handleRadioChange.bind(this);
-
-        this.humanStartCount = React.createRef();
-        this.zombieStartCount = React.createRef();
-        this.numZombieArms = React.createRef();
+        this.handleInputChange = this.handleInputChange.bind(this);
     }
 
     displayBoard(stateObject) {
@@ -61,16 +57,16 @@ class App extends React.Component {
                         moreShapes.push(
                             <circle
                                 cx={1.5*((arm - arm%10)/10) + .99} cy={k2+.87} r=".4"
-                                stroke="red" strokeWidth=".01" fill="red" opacity=".75" key={1000*j + 100*i + 2*x + 2}
+                                stroke="red" strokeWidth=".01" fill="red" opacity="1" key={1000*j + 100*i + 2*x + 2}
                             />,
                             <line
                                 x1={1.5*j + .99} y1={k+.87} x2={1.5*((arm - arm%10)/10) + .99} y2={k2+.87}
-                                style={{stroke: "red", strokeWidth: ".25"}} key={1000*j + 100*i + 2*x + 3} opacity=".75"
+                                style={{stroke: "red", strokeWidth: ".25"}} key={1000*j + 100*i + 2*x + 3} opacity="1"
                             />
                         )
                     }
                     theZombies.push(
-                        <circle cx={1.5*j + .99} cy={k+.87} r=".4" stroke="red" strokeWidth=".01" fill="red" opacity=".75" key={1000*j + 100*i + 15}/> //15
+                        <circle cx={1.5*j + .99} cy={k+.87} r=".4" stroke="red" strokeWidth=".01" fill="red" opacity="1" key={1000*j + 100*i + 15}/> //15
                     )
                 }
             }
@@ -78,25 +74,40 @@ class App extends React.Component {
         return (
             <svg viewBox="0 0 15.5 18.5">
                 {theHexagons}
-                {theHumans}
                 {theZombies}
                 {moreShapes}
+                {theHumans}
             </svg>
         )
     }
 
     displayControls(stateObject) {
         let theButtons = []
+        let theNumInputs = []
         let historyTable = null
         let historyTableRows = []
         let nextRoundButtonTextColor = "black"
-        let inputTextColor = "gray"
-        let inputReadOnlyStatus = true
         if (stateObject.humanCount===0) nextRoundButtonTextColor = "gray"
+        let slideButtonColor = "black"
+        if (stateObject.numZombieArms>2) slideButtonColor = "gray"
+        let slotsButtonColor = "black"
+        if (stateObject.numZombieArms>4) slotsButtonColor = "gray"
         if (stateObject.roundsCompleted===0) {
             theButtons = <button onClick={this.nextRound}>start</button>
-            inputTextColor = "black"
-            inputReadOnlyStatus = false
+            theNumInputs = [
+                <input
+                    type="number" className="num-input" id="human-start-count" key="0"
+                    defaultValue="50" name="humanStartCount" onChange={this.handleInputChange}
+                />,
+                <input
+                    type="number" className="num-input" id="zombie-start-count" key="1"
+                    defaultValue="1" name="zombieStartCount" onChange={this.handleInputChange}
+                />,
+                <input
+                    type="number" className="num-input" id="num-zombie-arms" key="2"
+                    defaultValue="2" name="numZombieArms" onChange={this.handleInputChange}
+                />
+            ]
         } else {
             theButtons = [
                 <div className="col-item" key="0">
@@ -106,6 +117,12 @@ class App extends React.Component {
                     <button onClick={this.restart}>restart</button>
                 </div>
             ]
+            theNumInputs = [
+                <label key="0"><strong>{stateObject.humanStartCount}</strong></label>,
+                <label key="1"><strong>{stateObject.zombieStartCount}</strong></label>,
+                <label key="2"><strong>{stateObject.numZombieArms}</strong></label>
+            ]
+
             for (let round in stateObject.history) {
                 historyTableRows.push(
                     <tr key={round}>
@@ -135,26 +152,17 @@ class App extends React.Component {
                     {theButtons}
                 </div>
                 <div id="col-1" className="column"> {/*initial condition settings*/}
-                    <div className="col-item" key="0">  {/* initial condition settings*/}
+                    <div className="col-item" key="0">
                         <label>Human Start Count</label>
-                        <input
-                            type="number" className="num-input" id="human-start-count" style={{color: inputTextColor}}
-                            defaultValue="50" ref={this.humanStartCount} readOnly={inputReadOnlyStatus}
-                        />
+                        {theNumInputs[0]}
                     </div>
                     <div className="col-item" key="1">
                         <label>Zombie Start Count</label>
-                        <input
-                            type="number" className="num-input" id="zombie-start-count" style={{color: inputTextColor}}
-                            defaultValue="1" ref={this.zombieStartCount} readOnly={inputReadOnlyStatus}
-                        />
+                        {theNumInputs[1]}
                     </div>
                     <div className="col-item" key="2">
                         <label># of Zombie Arms</label>
-                        <input
-                            type="number" className="num-input" id="num-zombie-arms" style={{color: inputTextColor}}
-                            defaultValue="2" ref={this.numZombieArms} readOnly={inputReadOnlyStatus}
-                        />
+                        {theNumInputs[2]}
                     </div>
                     <div className="col-item" key="3">
                         <label>Algorithm</label>
@@ -162,28 +170,25 @@ class App extends React.Component {
                             <div className="radio">
                                 <label>
                                     <input
-                                        type="radio" value="random-head" checked={this.state.currentAlgorithm==='random-head'} 
-                                        onChange={this.handleRadioChange}
-                                    />
-                                    Random Head
+                                        type="radio" value="random-head" checked={this.state.algorithm==='random-head'} 
+                                        name="algorithm" onChange={this.handleInputChange}
+                                    />Random Head
                                 </label>
                             </div>
                             <div className="radio">
-                                <label>
+                                <label style={{color: slideButtonColor}}>
                                     <input 
-                                        type="radio" value="slide" checked={this.state.currentAlgorithm==='slide'} 
-                                        onChange={this.handleRadioChange}
-                                    />
-                                    Slide
+                                        type="radio" value="slide" checked={this.state.algorithm==='slide'} 
+                                        name="algorithm" onChange={this.handleInputChange}
+                                    />Slide
                                 </label>
                             </div>
                             <div className="radio">
-                                <label>
+                                <label style={{color: slotsButtonColor}}>
                                     <input 
-                                        type="radio" value="slots" checked={this.state.currentAlgorithm==='slots'}
-                                        onChange={this.handleRadioChange}
-                                    />
-                                    Slots
+                                        type="radio" value="slots" checked={this.state.algorithm==='slots'}
+                                        name="algorithm" onChange={this.handleInputChange}
+                                    />Slots
                                 </label>
                             </div>
                         </div>
@@ -196,8 +201,19 @@ class App extends React.Component {
         )
     }
 
-    handleRadioChange(e) {
-        this.setState({currentAlgorithm: e.target.value})
+    handleInputChange(e) {
+        let property = e.target.name
+        let value = e.target.value
+        if (Number(value)) value = Number(value)
+        this.setState({[property]: value})
+    }
+
+    componentDidUpdate() { //verifies some settings and inputs
+        let stateObject = this.state
+        if (
+            (stateObject.numZombieArms>4 && stateObject.algorithm!=="random-head") ||
+            (stateObject.numZombieArms>2 && stateObject.algorithm==="slide")
+        ) this.setState({algorithm: "random-head"})
     }
 
     nextRound() {
@@ -208,9 +224,8 @@ class App extends React.Component {
         let numZombieArms = stateObject.numZombieArms
         let history = stateObject.history
         if (stateObject.roundsCompleted===0) {
-            humanCount = Number(this.humanStartCount.current.value)
-            zombieCount = Number(this.zombieStartCount.current.value)
-            numZombieArms = Number(this.numZombieArms.current.value)
+            humanCount = stateObject.humanStartCount
+            zombieCount = stateObject.zombieStartCount
             history.push(
                 {
                     humanCount: humanCount,
@@ -229,6 +244,7 @@ class App extends React.Component {
             humanOccupiedHexes.push(chosenHex)
             humanUnoccupiedHexes = deleteAtIndex(humanUnoccupiedHexes, chosenIndex)
         }
+
         function randomHeadAlgorithm() {
             //This is the first algorithm for deciding where to put the zombies.
             //For each zombie:
@@ -569,10 +585,107 @@ class App extends React.Component {
                 }
             }
         }
-        //------//
-        slideAlgorithm()
 
-        //---//
+        function slotsAlgorithm() {
+            //This is the third algorithm for deciding where to put the zombies.
+            //Each number of zombie arms has its own set of slots. Each zombie occupies one slot.
+            //For each zombie:
+            //1. A slot is randomly chosen from the set of unoccupied slots with the current maximum number of hexes.
+            //2. Unoccupied hexes which surround the chosen head hex are identified.
+
+            //{numArms: [[head, [arms], [head, [arms]]], []]}
+            let slotArray = [
+                [ //0 arms
+                    []      //slot set 0
+                ],
+                [], //1 arm
+                [ //2 arms
+                    [   // slot set 0 (2 arms)
+                        [19, [9, 29]],
+                        [49, [39, 59]],
+                        [79, [69, 89]]
+                    ],      
+                    [  //slot set 1 (0 arms)         
+                        [99, []]
+                    ] 
+                ],
+                [], //3 arms
+                [], //4 arms
+            ]
+            //building the sets of slots
+            let headPosition;
+            if (numZombieArms===0) {
+                for (let i=0; i<100; i++) {
+                    slotArray[0][0][i] = [i, []]
+                }
+            } else if (numZombieArms===1) {
+                for (let i=0; i<50; i++) {
+                    slotArray[1][0][i] = [2*i, [2*i+1]]
+                }
+            } else if (numZombieArms===2) {
+                headPosition = 1
+                for (let i=0; i<30; i++) {
+                    slotArray[2][0][i+3] = [headPosition, [headPosition-1, headPosition+1]]
+                    headPosition += 3
+                    if (headPosition%10===0) headPosition++
+                }
+            } else if (numZombieArms===3) {
+                headPosition = 1
+                for (let i=0; i<25; i++) {
+                    slotArray[3][0][i] = [headPosition, [headPosition-1, headPosition+9, headPosition+10]]
+                    headPosition += 2
+                    if (((headPosition - headPosition%10)/10)%2) headPosition += 10
+                }
+            } else if (numZombieArms===4) {
+                headPosition = 1
+                for (let i=0; i<20; i++) {
+                    if (i<10) {
+                        slotArray[4][0][i] = 
+                            [
+                                headPosition,
+                                [headPosition-1, headPosition+9, headPosition+10, headPosition+1]
+                            ]
+                        headPosition += 5
+                        if (((headPosition - headPosition%10)/10)%2) headPosition += 10
+                    } else {
+                        if (i===10) headPosition = 13
+                        slotArray[4][0][i] = 
+                            [
+                                headPosition,
+                                [headPosition-1, headPosition-10, headPosition-9, headPosition+1]
+                            ]
+                        headPosition += 5
+                        if (!(((headPosition - headPosition%10)/10)%2)) headPosition += 10
+                    }
+                }
+            }
+            
+            let currentSlots = arrayCopy(slotArray[numZombieArms][0])
+            for (let i=0; i<zombieCount; i++) {
+                console.log("placing zombie #", i)
+                if (zombieUnoccupiedHexes.length===0) break;
+                else if (currentSlots.length===0) currentSlots = slotArray[numZombieArms][1]
+                let chosenIndex = randomInteger(0, currentSlots.length - 1)
+                let chosenSlot = currentSlots[chosenIndex]
+                console.log("chosen zombie:", chosenSlot)
+                let chosenHead = chosenSlot[0]
+                let chosenArms = chosenSlot[1]
+    
+                zombieHeadHexes[chosenHead] = chosenArms
+                zombieOccupiedHexes.push(chosenHead)
+                zombieOccupiedHexes = zombieOccupiedHexes.concat(chosenArms)
+                currentSlots = deleteAtIndex(currentSlots, chosenIndex)
+            }
+        }
+
+        //------//
+
+        if (stateObject.algorithm==="random-head") randomHeadAlgorithm()
+        else if (stateObject.algorithm==="slide") slideAlgorithm()
+        else if (stateObject.algorithm==="slots") slotsAlgorithm()
+
+        //------//
+
         let newInfections = 0
         for (let hex of zombieOccupiedHexes) {
             if (humanOccupiedHexes.includes(hex)) newInfections++
