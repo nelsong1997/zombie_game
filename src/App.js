@@ -7,6 +7,7 @@ class App extends React.Component {
             roundsCompleted: 0,
             zombieHeadHexes: makeZeroesArray(100),
             humanOccupiedHexes: [],
+            vaccinatedOccupiedHexes: [],
             numZombieArms: 2,
             humanCount: 50,
             zombieCount: 1,
@@ -15,8 +16,8 @@ class App extends React.Component {
             history: [],
             algorithm: "random-head",
             mortality: false,
-            vaccination: false,
             mortalityNum: 1,
+            vaccination: false,
             vaccinatedCount: 0,
             vaccinatedStartCount: 0,
             vaccineEffectiveness: 80
@@ -29,6 +30,7 @@ class App extends React.Component {
     displayBoard(stateObject) {
         let theHexagons = []
         let theHumans = []
+        let theVaccinated = []
         let theZombies = []
         let moreShapes = []
         for (let j=0; j<10; j++) { //j==columns
@@ -53,8 +55,16 @@ class App extends React.Component {
                         </text>
                     )
                 }
+                if (stateObject.vaccinatedOccupiedHexes.includes(10*j + i)) {
+                    theVaccinated.push(
+                        <text
+                            x={1.5*j + .55} y={k+1.3} //3
+                            fontFamily="Arial" fontSize="1.75px" fill="lime" key={1000*j+100*i + 2}>x
+                        </text>
+                    )
+                }
                 if (stateObject.zombieHeadHexes[(10*j + i)]) {
-                    for (let x=0; x<stateObject.zombieHeadHexes[(10*j + i)].length; x++) { //3-14
+                    for (let x=0; x<stateObject.zombieHeadHexes[(10*j + i)].length; x++) { //4-15
                         let arm = stateObject.zombieHeadHexes[(10*j + i)][x]
                         let h2 = 0
                         if (((arm - arm%10)/10)%2) h2 = Math.sqrt(3)/2
@@ -62,16 +72,16 @@ class App extends React.Component {
                         moreShapes.push(
                             <circle
                                 cx={1.5*((arm - arm%10)/10) + .99} cy={k2+.87} r=".4"
-                                stroke="red" strokeWidth=".01" fill="red" opacity="1" key={1000*j + 100*i + 2*x + 2}
+                                stroke="red" strokeWidth=".01" fill="red" opacity="1" key={1000*j + 100*i + 2*x + 3}
                             />,
                             <line
                                 x1={1.5*j + .99} y1={k+.87} x2={1.5*((arm - arm%10)/10) + .99} y2={k2+.87}
-                                style={{stroke: "red", strokeWidth: ".25"}} key={1000*j + 100*i + 2*x + 3} opacity="1"
+                                style={{stroke: "red", strokeWidth: ".25"}} key={1000*j + 100*i + 2*x + 4} opacity="1"
                             />
                         )
                     }
                     theZombies.push(
-                        <circle cx={1.5*j + .99} cy={k+.87} r=".4" stroke="red" strokeWidth=".01" fill="red" opacity="1" key={1000*j + 100*i + 15}/> //15
+                        <circle cx={1.5*j + .99} cy={k+.87} r=".4" stroke="red" strokeWidth=".01" fill="red" opacity="1" key={1000*j + 100*i + 16}/> //16
                     )
                 }
             }
@@ -82,6 +92,7 @@ class App extends React.Component {
                 {theZombies}
                 {moreShapes}
                 {theHumans}
+                {theVaccinated}
             </svg>
         )
     }
@@ -92,13 +103,14 @@ class App extends React.Component {
         let historyTable = null
         let historyTableRows = []
         let nextRoundButtonTextColor = "black"
-        if (stateObject.humanCount===0) nextRoundButtonTextColor = "gray"
+        if ((stateObject.humanCount===0 && stateObject.vaccinatedCount===0) || stateObject.zombieCount===0) nextRoundButtonTextColor = "gray"
         let slideButtonColor = "black"
         if (stateObject.numZombieArms>2) slideButtonColor = "gray"
         let slotsButtonColor = "black"
         if (stateObject.numZombieArms>4) slotsButtonColor = "gray"
         let mortalityNumInput = null
         let vaccinationNumInputs = null
+        let otherOptions = null
         if (stateObject.roundsCompleted===0) {
             if (stateObject.mortality) { 
                 mortalityNumInput = [
@@ -135,6 +147,29 @@ class App extends React.Component {
                     value={stateObject.numZombieArms} name="numZombieArms" onChange={this.handleInputChange}
                 />
             ]
+            otherOptions = [
+                <div className="col-item" key="7">
+                    <label>Other Options</label>
+                    <div id="other-options">
+                        <div>
+                            <label>
+                                <input
+                                    type="checkbox" value={!stateObject.mortality} checked={stateObject.mortality} 
+                                    name="mortality" onChange={this.handleInputChange}
+                                />Zombie Mortality
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                <input 
+                                    type="checkbox" value={!stateObject.vaccination} checked={stateObject.vaccination} 
+                                    name="vaccination" onChange={this.handleInputChange}
+                                />Vaccination
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            ]
         } else {
             if (stateObject.mortality) { 
                 mortalityNumInput = [<label key="0"><strong>{stateObject.mortalityNum}</strong></label>]
@@ -160,25 +195,37 @@ class App extends React.Component {
             ]
 
             for (let round in stateObject.history) {
+                let vaccinatedCountData = null
+                if (stateObject.vaccination) vaccinatedCountData = [
+                    <td>{stateObject.history[round].vaccinatedCount}</td>
+                ]
                 historyTableRows.push(
                     <tr key={round}>
                         <td>{round}</td>
                         <td>{stateObject.history[round].humanCount}</td>
+                        {vaccinatedCountData}
                         <td>{stateObject.history[round].zombieCount}</td>
+                        <td>{stateObject.history[round].newInfections}</td>
                     </tr>
                 )
             }
+            let vaccinatedTableHeader = null
+            if (stateObject.vaccination) vaccinatedTableHeader = [<th>Vaccinated Count</th>]
             historyTable = [
-                <table key="0">
-                    <tbody>
-                        <tr>
-                            <th>Round #</th>
-                            <th>Human Count</th>
-                            <th>Zombie Count</th>
-                        </tr>
-                        {historyTableRows}
-                    </tbody>
-                </table>
+                <div id="col-2" className="column" key="0">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <th>Round #</th>
+                                <th>Human Count</th>
+                                {vaccinatedTableHeader}
+                                <th>Zombie Count</th>
+                                <th>New Infections</th>
+                            </tr>
+                            {historyTableRows}
+                        </tbody>
+                    </table>
+                </div>
             ]
         }
         let mortalityColItem = null
@@ -253,31 +300,9 @@ class App extends React.Component {
                             </div>
                         </div>
                     </div>
-                    <div className="col-item" key="7">
-                        <label>Other Options</label>
-                        <div id="other-options">
-                            <div>
-                                <label>
-                                    <input
-                                        type="checkbox" value={!stateObject.mortality} checked={stateObject.mortality} 
-                                        name="mortality" onChange={this.handleInputChange}
-                                    />Zombie Mortality
-                                </label>
-                            </div>
-                            <div>
-                                <label>
-                                    <input 
-                                        type="checkbox" value={!stateObject.vaccination} checked={stateObject.vaccination} 
-                                        name="vaccination" onChange={this.handleInputChange}
-                                    />Vaccination
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+                    {otherOptions}
                 </div>
-                <div id="col-2" className="column">   {/* status*/}
-                    {historyTable}
-                </div>
+                {historyTable}
             </div>
         )
     }
@@ -285,14 +310,15 @@ class App extends React.Component {
     handleInputChange(e) {
         let property = e.target.name
         let value = e.target.value
-        if (e.target.type==="number") {
-            value = Math.abs(Number(value)-Number(value)%1)
-            if (value<e.target.min) value = Number(e.target.min)
-            else if (e.target.max && value>e.target.max) value = Number(e.target.max)
+        if (e.target.type==="number") { 
+            value = Number(value)                                        //if it's a number we don't want it to be a string
+            if (property!=="vaccineEffectiveness") value = value-value%1 //the effectiveness can be a decimal
+            if (value<e.target.min) value = Number(e.target.min)         //don't let it go below min
+            else if (e.target.max && value>e.target.max) value = Number(e.target.max) //or above max
         }
         if (e.target.type==="checkbox") {
             value = (value==="true")
-            if (property==="vaccination" && value) {
+            if (property==="vaccination" && value) { //revert human count if it's too high
                 this.setState({vaccinatedStartCount: 25})
                 if (this.state.humanStartCount>75) this.setState({humanStartCount: 75})
             } else if (property==="vaccination" && !value) this.setState({vaccinatedStartCount: 0})
@@ -310,31 +336,52 @@ class App extends React.Component {
 
     nextRound() {
         let stateObject = this.state
-        if (stateObject.humanCount===0) return
         let humanCount = stateObject.humanCount
+        let vaccination = stateObject.vaccination
+        let vaccinatedCount = stateObject.vaccinatedCount
+        let vaccineEffectiveness = stateObject.vaccineEffectiveness
         let zombieCount = stateObject.zombieCount
+        if ((humanCount===0 && vaccinatedCount===0) || zombieCount===0) return
         let numZombieArms = stateObject.numZombieArms
         let history = stateObject.history
+        let mortality = stateObject.mortality
+        let mortalityNum = stateObject.mortalityNum
+        let roundsCompleted = stateObject.roundsCompleted
+
         if (stateObject.roundsCompleted===0) {
             humanCount = stateObject.humanStartCount
             zombieCount = stateObject.zombieStartCount
-            history.push(
-                {
+            if (vaccination) vaccinatedCount = stateObject.vaccinatedStartCount
+            history[0] = {
                     humanCount: humanCount,
-                    zombieCount: zombieCount
+                    zombieCount: zombieCount,
+                    newInfections: zombieCount
                 }
-            )
+            if (vaccination) history[0].vaccinatedCount = vaccinatedCount
         }
+        if (mortality && roundsCompleted >= mortalityNum) {
+            zombieCount = zombieCount - history[roundsCompleted - mortalityNum].newInfections
+        }
+
         let humanUnoccupiedHexes = makeCountArray(100)
         let zombieUnoccupiedHexes = makeCountArray(100)
         let humanOccupiedHexes = []
         let zombieOccupiedHexes = []
+        let vaccinatedOccupiedHexes = []
         let zombieHeadHexes = makeZeroesArray(100)
         for (let i=0; i<humanCount; i++) {
-            let chosenIndex = randomInteger(0, 99-i)
+            let chosenIndex = randomInteger(0, humanUnoccupiedHexes.length - 1)
             let chosenHex = humanUnoccupiedHexes[chosenIndex]
             humanOccupiedHexes.push(chosenHex)
             humanUnoccupiedHexes = deleteAtIndex(humanUnoccupiedHexes, chosenIndex)
+        }
+        if (vaccination) {
+            for (let i=0; i<vaccinatedCount; i++) {
+                let chosenIndex = randomInteger(0, humanUnoccupiedHexes.length - 1)
+                let chosenHex = humanUnoccupiedHexes[chosenIndex]
+                vaccinatedOccupiedHexes.push(chosenHex)
+                humanUnoccupiedHexes = deleteAtIndex(humanUnoccupiedHexes, chosenIndex)
+            }
         }
 
         function randomHeadAlgorithm() {
@@ -778,26 +825,35 @@ class App extends React.Component {
         //------//
 
         let newInfections = 0
+        let newVaccinatedInfections = 0
         for (let hex of zombieOccupiedHexes) {
             if (humanOccupiedHexes.includes(hex)) newInfections++
+            if (vaccinatedOccupiedHexes.includes(hex)) {
+                let roll = Math.random()
+                if (roll<(vaccineEffectiveness)/100) newVaccinatedInfections++
+            }
         }
-        humanCount = humanCount - newInfections
-        zombieCount = zombieCount + newInfections
-        history.push(
+        humanCount -= newInfections
+        vaccinatedCount -= newVaccinatedInfections
+        zombieCount += newInfections
+        zombieCount += newVaccinatedInfections
+        history[roundsCompleted + 1] = 
             {
                 humanCount: humanCount,
                 zombieCount: zombieCount,
                 newInfections: newInfections
             }
-        )
+        if (vaccination) history[roundsCompleted + 1].vaccinatedCount = vaccinatedCount
 
         this.setState(
             {
                 humanOccupiedHexes: humanOccupiedHexes.sort((a, b) => a-b),
+                vaccinatedOccupiedHexes: vaccinatedOccupiedHexes,
                 zombieHeadHexes: zombieHeadHexes,
-                roundsCompleted: stateObject.roundsCompleted + 1,
+                roundsCompleted: roundsCompleted + 1,
                 zombieCount: zombieCount,
                 humanCount: humanCount,
+                vaccinatedCount: vaccinatedCount,
                 numZombieArms: numZombieArms,
                 history: history
             }
@@ -810,9 +866,11 @@ class App extends React.Component {
                 roundsCompleted: 0,
                 humanOccupiedHexes: [],
                 zombieOccupiedHexes: [],
+                vaccinatedOccupiedHexes: [],
                 zombieHeadHexes: makeZeroesArray(100),
                 numZombieArms: 2,
                 humanCount: 50,
+                vaccinatedCount: this.state.vaccinatedStartCount,
                 zombieCount: 1,
                 history: []
             }
@@ -917,6 +975,5 @@ function isASubset(smallArray, bigArray) {
 
 export default App;
 
-//zombie mortality
 //vaxx
 //hotseat
