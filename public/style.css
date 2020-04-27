@@ -5,6 +5,7 @@ svg {
 #main {
     display: flex;
     flex-direction: row;
+    margin: 10px;
 }
 
 #controls {
@@ -44,6 +45,22 @@ table, th, td {
     padding: 3px;
   }
 
-#algorithm-select, #other-options {
+#algorithm-select, #other-options, #mode-select {
     margin-top: 5px;
+}
+
+#outer {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+body, html, #root {
+    height: 100%;
+    margin: 0px;
+}
+
+#reference {
+    margin: 10px;
 }

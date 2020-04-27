@@ -20,7 +20,8 @@ class App extends React.Component {
             vaccination: false,
             vaccinatedCount: 0,
             vaccinatedStartCount: 0,
-            vaccineEffectiveness: 80
+            vaccineEffectiveness: 80,
+            mode: "auto"
         }
         this.nextRound = this.nextRound.bind(this);
         this.restart = this.restart.bind(this);
@@ -165,6 +166,27 @@ class App extends React.Component {
                                     type="checkbox" value={!stateObject.vaccination} checked={stateObject.vaccination} 
                                     name="vaccination" onChange={this.handleInputChange}
                                 />Vaccination
+                            </label>
+                        </div>
+                    </div>
+                </div>,
+                <div className="col-item" key="8">
+                    <label>Mode</label>
+                    <div id="mode-select">
+                        <div>
+                            <label>
+                                <input
+                                    type="radio" value="auto" checked={stateObject.mode==="auto"} 
+                                    name="mode" onChange={this.handleInputChange}
+                                />Auto
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                <input 
+                                    type="radio" value="hotseat" checked={stateObject.mode==="hotseat"} 
+                                    name="mode" onChange={this.handleInputChange}
+                                />Hotseat
                             </label>
                         </div>
                     </div>
@@ -736,7 +758,7 @@ class App extends React.Component {
                 [ //0 arms
                     []      //slot set 0
                 ],
-                [], //1 arm
+                [[]], //1 arm
                 [ //2 arms
                     [   // slot set 0 (2 arms)
                         [19, [9, 29]],
@@ -747,8 +769,8 @@ class App extends React.Component {
                         [99, []]
                     ] 
                 ],
-                [], //3 arms
-                [], //4 arms
+                [[]], //3 arms
+                [[]], //4 arms
             ]
             //building the sets of slots
             let headPosition;
@@ -757,6 +779,7 @@ class App extends React.Component {
                     slotArray[0][0][i] = [i, []]
                 }
             } else if (numZombieArms===1) {
+                console.log(slotArray)
                 for (let i=0; i<50; i++) {
                     slotArray[1][0][i] = [2*i, [2*i+1]]
                 }
@@ -801,7 +824,7 @@ class App extends React.Component {
             let currentSlots = arrayCopy(slotArray[numZombieArms][0])
             for (let i=0; i<zombieCount; i++) {
                 console.log("placing zombie #", i)
-                if (zombieUnoccupiedHexes.length===0) break;
+                if (currentSlots.length===0 && !slotArray[numZombieArms][1]) break;
                 else if (currentSlots.length===0) currentSlots = slotArray[numZombieArms][1]
                 let chosenIndex = randomInteger(0, currentSlots.length - 1)
                 let chosenSlot = currentSlots[chosenIndex]
@@ -830,7 +853,7 @@ class App extends React.Component {
             if (humanOccupiedHexes.includes(hex)) newInfections++
             if (vaccinatedOccupiedHexes.includes(hex)) {
                 let roll = Math.random()
-                if (roll<(vaccineEffectiveness)/100) newVaccinatedInfections++
+                if (roll>=(vaccineEffectiveness/100)) newVaccinatedInfections++
             }
         }
         humanCount -= newInfections
@@ -841,7 +864,7 @@ class App extends React.Component {
             {
                 humanCount: humanCount,
                 zombieCount: zombieCount,
-                newInfections: newInfections
+                newInfections: newInfections + newVaccinatedInfections
             }
         if (vaccination) history[roundsCompleted + 1].vaccinatedCount = vaccinatedCount
 
@@ -868,20 +891,29 @@ class App extends React.Component {
                 zombieOccupiedHexes: [],
                 vaccinatedOccupiedHexes: [],
                 zombieHeadHexes: makeZeroesArray(100),
-                numZombieArms: 2,
-                humanCount: 50,
+                humanCount: this.state.humanStartCount,
                 vaccinatedCount: this.state.vaccinatedStartCount,
-                zombieCount: 1,
+                zombieCount: this.state.zombieStartCount,
                 history: []
             }
         )
     }
 
+//------------------------------------------------------------------------------------------------------------------------//
+
+//------------------------------------------------------------------------------------------------------------------------//
+
     render() {
         return (
-            <div id="main">
-                {this.displayBoard(this.state)}
-                {this.displayControls(this.state)}
+            <div id="outer">
+                <div id="main">
+                    {this.displayBoard(this.state)}
+                    {this.displayControls(this.state)}
+                </div>
+                <label id="reference">
+                    Based on a game concept by Jim Powell and Matt Lewis: 
+                    <a href="https://digitalcommons.usu.edu/lemb/1/">https://digitalcommons.usu.edu/lemb/1/</a>.
+                </label>
             </div>
         )
     }
@@ -975,5 +1007,4 @@ function isASubset(smallArray, bigArray) {
 
 export default App;
 
-//vaxx
 //hotseat
