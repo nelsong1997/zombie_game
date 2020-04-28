@@ -7,25 +7,33 @@ class App extends React.Component {
             roundsCompleted: 0,
             zombieHeadHexes: makeZeroesArray(100),
             humanOccupiedHexes: [],
+            zombieOccupiedHexes: [],
             vaccinatedOccupiedHexes: [],
             numZombieArms: 2,
             humanCount: 50,
+            vaccinatedCount: 0,
             zombieCount: 1,
-            humanStartCount: 50,
-            zombieStartCount: 1,
             history: [],
             algorithm: "random-head",
             mortality: false,
             mortalityNum: 1,
             vaccination: false,
-            vaccinatedCount: 0,
-            vaccinatedStartCount: 0,
             vaccineEffectiveness: 80,
-            mode: "auto"
+            mode: "auto",
+            gameStarted: false,
+            whoseTurn: "Humans",
+            placeHeadOrArm: "head",
+            currentHeadHex: 0,
+            numArmsRemaining: 0,
+            hiddenHumanHexes: []
         }
+        this.start = this.start.bind(this)
         this.nextRound = this.nextRound.bind(this);
+        this.nextRoundHotseat = this.nextRoundHotseat.bind(this);
         this.restart = this.restart.bind(this);
         this.handleInputChange = this.handleInputChange.bind(this);
+        this.handleHexClick = this.handleHexClick.bind(this);
+        this.calcNewInfections = this.calcNewInfections.bind(this);
     }
 
     displayBoard(stateObject) {
@@ -44,8 +52,8 @@ class App extends React.Component {
                      ${1.5*j+1.5},${k+Math.sqrt(3)} ${1.5*j+.5},${k+Math.sqrt(3)} ${1.5*j},${k+Math.sqrt(3)/2}`
                 theHexagons.push(
                     <polygon
-                        id={"hex-" + (10*j + i)} points={pointsString} key={1000*j + 100*i} //1
-                        style={{fill: "none", stroke: "black", strokeWidth: ".02"}}
+                        id={"hex-" + j + "" + i} points={pointsString} key={1000*j + 100*i} //1
+                        style={{fill: "white", stroke: "black", strokeWidth: ".02"}} onClick={this.handleHexClick}
                     />
                 )
                 if (stateObject.humanOccupiedHexes.includes(10*j + i)) {
@@ -101,10 +109,10 @@ class App extends React.Component {
     displayControls(stateObject) {
         let theButtons = []
         let theNumInputs = []
-        let historyTable = null
-        let historyTableRows = []
         let nextRoundButtonTextColor = "black"
-        if ((stateObject.humanCount===0 && stateObject.vaccinatedCount===0) || stateObject.zombieCount===0) nextRoundButtonTextColor = "gray"
+        if ((stateObject.humanCount===0 && stateObject.vaccinatedCount===0) || stateObject.zombieCount===0) {
+            nextRoundButtonTextColor = "gray"
+        }
         let slideButtonColor = "black"
         if (stateObject.numZombieArms>2) slideButtonColor = "gray"
         let slotsButtonColor = "black"
@@ -112,7 +120,7 @@ class App extends React.Component {
         let mortalityNumInput = null
         let vaccinationNumInputs = null
         let otherOptions = null
-        if (stateObject.roundsCompleted===0) {
+        if (!stateObject.gameStarted) { //game not started
             if (stateObject.mortality) { 
                 mortalityNumInput = [
                     <input
@@ -124,8 +132,8 @@ class App extends React.Component {
             if (stateObject.vaccination) { 
                 vaccinationNumInputs = [
                     <input
-                        type="number" className="num-input" id="vaccinated-start-count" key="0" min="0" max={100-stateObject.humanStartCount}
-                        value={stateObject.vaccinatedStartCount} name="vaccinatedStartCount" onChange={this.handleInputChange}
+                        type="number" className="num-input" id="vaccinated-start-count" key="0" min="0" max={100-stateObject.humanCount}
+                        value={stateObject.vaccinatedCount} name="vaccinatedCount" onChange={this.handleInputChange}
                     />,
                     <input
                         type="number" className="num-input" id="vaccine-effectiveness" key="0" min="0" max="100"
@@ -133,15 +141,15 @@ class App extends React.Component {
                     />
                 ]
             }
-            theButtons = <button onClick={this.nextRound}>start</button>
+            theButtons = <button onClick={this.start}>start</button>
             theNumInputs = [
                 <input
-                    type="number" className="num-input" id="human-start-count" key="0" min="0" max={100-stateObject.vaccinatedStartCount}
-                    value={stateObject.humanStartCount} name="humanStartCount" onChange={this.handleInputChange}
+                    type="number" className="num-input" id="human-start-count" key="0" min="0" max={100-stateObject.vaccinatedCount}
+                    value={stateObject.humanCount} name="humanCount" onChange={this.handleInputChange}
                 />,
                 <input
                     type="number" className="num-input" id="zombie-start-count" key="1" min="1" max="100"
-                    value={stateObject.zombieStartCount} name="zombieStartCount" onChange={this.handleInputChange}
+                    value={stateObject.zombieCount} name="zombieCount" onChange={this.handleInputChange}
                 />,
                 <input
                     type="number" className="num-input" id="num-zombie-arms" key="2" min="0" max="6"
@@ -192,62 +200,38 @@ class App extends React.Component {
                     </div>
                 </div>
             ]
-        } else {
+        } else { //game started
             if (stateObject.mortality) { 
                 mortalityNumInput = [<label key="0"><strong>{stateObject.mortalityNum}</strong></label>]
             }
             if (stateObject.vaccination) { 
                 vaccinationNumInputs = [
-                    <label key="0"><strong>{stateObject.vaccinatedStartCount}</strong></label>,
+                    <label key="0"><strong>{stateObject.history[0].vaccinatedCount}</strong></label>,
                     <label key="1"><strong>{stateObject.vaccineEffectiveness}</strong></label>
                 ]
             }
-            theButtons = [
-                <div className="col-item" key="0">
-                    <button onClick={this.nextRound} style={{color: nextRoundButtonTextColor}}>next round</button>
-                </div>,
+            if (stateObject.mode==="auto") {
+                theButtons[0] = [
+                    <div className="col-item" key="0">
+                        <button onClick={this.nextRound} style={{color: nextRoundButtonTextColor}}>next round</button>
+                    </div>
+                ]
+            } else if (stateObject.whoseTurn==="wait") {
+                theButtons[0] = [
+                    <div className="col-item" key="0">
+                        <button onClick={this.nextRoundHotseat} style={{color: nextRoundButtonTextColor}}>next round</button>
+                    </div>
+                ]
+            }
+            theButtons[1] = [
                 <div className="col-item" key="1">
                     <button onClick={this.restart}>restart</button>
                 </div>
             ]
             theNumInputs = [
-                <label key="0"><strong>{stateObject.humanStartCount}</strong></label>,
-                <label key="1"><strong>{stateObject.zombieStartCount}</strong></label>,
+                <label key="0"><strong>{stateObject.history[0].humanCount}</strong></label>,
+                <label key="1"><strong>{stateObject.history[0].zombieCount}</strong></label>,
                 <label key="2"><strong>{stateObject.numZombieArms}</strong></label>
-            ]
-
-            for (let round in stateObject.history) {
-                let vaccinatedCountData = null
-                if (stateObject.vaccination) vaccinatedCountData = [
-                    <td>{stateObject.history[round].vaccinatedCount}</td>
-                ]
-                historyTableRows.push(
-                    <tr key={round}>
-                        <td>{round}</td>
-                        <td>{stateObject.history[round].humanCount}</td>
-                        {vaccinatedCountData}
-                        <td>{stateObject.history[round].zombieCount}</td>
-                        <td>{stateObject.history[round].newInfections}</td>
-                    </tr>
-                )
-            }
-            let vaccinatedTableHeader = null
-            if (stateObject.vaccination) vaccinatedTableHeader = [<th>Vaccinated Count</th>]
-            historyTable = [
-                <div id="col-2" className="column" key="0">
-                    <table>
-                        <tbody>
-                            <tr>
-                                <th>Round #</th>
-                                <th>Human Count</th>
-                                {vaccinatedTableHeader}
-                                <th>Zombie Count</th>
-                                <th>New Infections</th>
-                            </tr>
-                            {historyTableRows}
-                        </tbody>
-                    </table>
-                </div>
             ]
         }
         let mortalityColItem = null
@@ -324,9 +308,106 @@ class App extends React.Component {
                     </div>
                     {otherOptions}
                 </div>
-                {historyTable}
             </div>
         )
+    }
+
+    displayStatusInfo(stateObject) {
+        if (stateObject.mode==="auto" || !stateObject.gameStarted) return null
+        if (stateObject.whoseTurn==="Humans" || stateObject.whoseTurn==="Zombies") {
+            let whoseTurnTextColor;
+            let currentlyPlacingTypeColor;
+            let currentlyPlacingType;
+            if (stateObject.whoseTurn==="Humans") {
+                whoseTurnTextColor = "blue"
+                if (stateObject.humanCount>0) {
+                   currentlyPlacingType = "human"
+                   currentlyPlacingTypeColor = "blue"
+                } else if (stateObject.vaccinatedCount>0) {
+                    currentlyPlacingType = "vaccinated human"
+                    currentlyPlacingTypeColor = "lime"
+                } else {
+                    return (
+                        <div id="status-info" className="column">
+                            <p><strong>Switch players!</strong></p>
+                        </div>
+                    )
+                }
+            } else if (stateObject.whoseTurn==="Zombies") {
+                whoseTurnTextColor = "red"
+                if (stateObject.zombieCount>0) {
+                    currentlyPlacingType = "zombie"
+                    currentlyPlacingTypeColor = "red"
+                }
+            }
+            let currentlyPlacingName = currentlyPlacingType + "Count"
+            currentlyPlacingName = currentlyPlacingName.split(" human").join("") //"zombieCount" => "zombieCount"; "vaccinated humanCount" => "vaccinatedCount"
+            let currentlyPlacingNum = stateObject[currentlyPlacingName]
+            return (
+                <div id="status-info" className="column">
+                    <p><strong style={{color: whoseTurnTextColor}}>{stateObject.whoseTurn}'</strong> turn!</p>
+                    <p>Currently placing <strong style={{color: currentlyPlacingTypeColor}}>
+                        {currentlyPlacingType} #{stateObject.history[stateObject.roundsCompleted][currentlyPlacingName] - currentlyPlacingNum + 1}
+                        </strong>!</p>
+                    <p>
+                        You have {currentlyPlacingNum} <strong style={{color: currentlyPlacingTypeColor}}>
+                            {currentlyPlacingType + ((currentlyPlacingNum===1 && " ") || "s")}
+                        </strong> left to place.
+                    </p>
+                </div>
+            )
+        } else if (stateObject.whoseTurn==="wait") {
+            let waitEndMessage = [<p key="0"><strong>Switch players!</strong></p>]
+            if (stateObject.humanCount===0 && stateObject.vaccinatedCount===0) {
+                waitEndMessage = [<p key="0"><strong style={{color: "red"}}>The Zombies win!</strong></p>]
+            } else if (stateObject.zombieCount===0) {
+                waitEndMessage = [<p key="0"><strong style={{color: "blue"}}>The Humans win!</strong></p>]
+            }
+            return (
+                <div id="status-info" className="column">
+                    <p>Round ended. x normal humans were infected and y vaccinated humans were infected.</p>
+                    {waitEndMessage}
+                </div>
+            )
+        }
+    }
+
+    displayHistoryTable(history, gameStarted) {
+        if (gameStarted) {
+            let historyTableRows = []
+            for (let round in history) {
+                let vaccinatedCountData = null
+                if (this.state.vaccination) vaccinatedCountData = [
+                    <td>{history[round].vaccinatedCount}</td>
+                ]
+                historyTableRows.push(
+                    <tr key={round}>
+                        <td>{round}</td>
+                        <td>{history[round].humanCount}</td>
+                        {vaccinatedCountData}
+                        <td>{history[round].zombieCount}</td>
+                        <td>{history[round].newInfections}</td>
+                    </tr>
+                )
+            }
+            let vaccinatedTableHeader = null
+            if (this.state.vaccination) vaccinatedTableHeader = [<th>Vaccinated Count</th>]
+            let historyTable = [
+                <table key="0">
+                    <tbody>
+                        <tr>
+                            <th>Round #</th>
+                            <th>Human Count</th>
+                            {vaccinatedTableHeader}
+                            <th>Zombie Count</th>
+                            <th>New Infections</th>
+                        </tr>
+                        {historyTableRows}
+                    </tbody>
+                </table>
+            ]
+            return historyTable
+        } else return null
     }
 
     handleInputChange(e) {
@@ -341,9 +422,9 @@ class App extends React.Component {
         if (e.target.type==="checkbox") {
             value = (value==="true")
             if (property==="vaccination" && value) { //revert human count if it's too high
-                this.setState({vaccinatedStartCount: 25})
-                if (this.state.humanStartCount>75) this.setState({humanStartCount: 75})
-            } else if (property==="vaccination" && !value) this.setState({vaccinatedStartCount: 0})
+                this.setState({vaccinatedCount: 25})
+                if (this.state.humanCount>75) this.setState({humanCount: 75})
+            } else if (property==="vaccination" && !value) this.setState({vaccinatedCount: 0})
         }
         this.setState({[property]: value})
     }
@@ -356,31 +437,152 @@ class App extends React.Component {
         ) this.setState({algorithm: "random-head"})
     }
 
-    nextRound() {
+    handleHexClick(e) {
         let stateObject = this.state
-        let humanCount = stateObject.humanCount
-        let vaccination = stateObject.vaccination
+        if (!stateObject.gameStarted || stateObject.mode==="auto") return
+        let selectedHex = Number(e.target.id.slice(-2))
+        if (
+            stateObject.whoseTurn==="Humans" &&
+            !stateObject.humanOccupiedHexes.includes(selectedHex) &&
+            !stateObject.vaccinatedOccupiedHexes.includes(selectedHex)
+            ) {
+                if (stateObject.humanCount > 0) {
+                    let humanOccupiedHexes = stateObject.humanOccupiedHexes
+                    humanOccupiedHexes.push(selectedHex)
+                    this.setState(
+                        {
+                            humanOccupiedHexes: humanOccupiedHexes.sort((a,b) => a-b),
+                            humanCount: stateObject.humanCount - 1
+                        }
+                    )
+                } else if (stateObject.vaccinatedCount > 0) {
+                    let vaccinatedOccupiedHexes = stateObject.vaccinatedOccupiedHexes
+                    vaccinatedOccupiedHexes.push(selectedHex)
+                    this.setState(
+                        {
+                            vaccinatedOccupiedHexes: vaccinatedOccupiedHexes.sort((a,b) => a-b),
+                            vaccinatedCount: stateObject.vaccinatedCount - 1
+                        }
+                    )
+                }
+                if (stateObject.humanCount + stateObject.vaccinatedCount===1) { //this means we just placed our last human
+                    setTimeout(() => {
+                            this.setState(
+                                {
+                                    whoseTurn: "Zombies",
+                                    hiddenHumanHexes: stateObject.humanOccupiedHexes,
+                                    humanOccupiedHexes: []
+                                }
+                            )
+
+                        }, 1500
+                    )
+                }
+        } else if (
+            stateObject.whoseTurn==="Zombies" &&
+            !stateObject.zombieOccupiedHexes.includes(selectedHex)
+            ) {
+                let zombieCount = stateObject.zombieCount
+                if (stateObject.placeHeadOrArm==="head") {
+                    let zombieOccupiedHexes = stateObject.zombieOccupiedHexes
+                    let zombieHeadHexes = stateObject.zombieHeadHexes
+                    zombieOccupiedHexes.push(selectedHex)
+                    zombieHeadHexes[selectedHex] = []
+
+                    //calculate how many arm opts there are
+                    let theSurroundingHexes = findSurroundingHexes(selectedHex)
+                    let numArmOptions = 0
+                    for (let hex of theSurroundingHexes) {
+                        if (!zombieOccupiedHexes.includes(hex)) numArmOptions++
+                    }
+                    let placeHeadOrArm = "arm"
+                    if (numArmOptions===0 || stateObject.numZombieArms===0) {
+                        placeHeadOrArm = "head"
+                        zombieCount--
+                    }
+
+                    this.setState(
+                        {
+                            zombieOccupiedHexes: zombieOccupiedHexes.sort((a,b) => a-b),
+                            zombieHeadHexes: zombieHeadHexes,
+                            zombieCount: zombieCount,
+                            placeHeadOrArm: placeHeadOrArm,
+                            numArmsRemaining: stateObject.numZombieArms,
+                            currentHeadHex: selectedHex
+                        }
+                    )
+                } else if (stateObject.placeHeadOrArm==="arm") {
+                    let zombieOccupiedHexes = stateObject.zombieOccupiedHexes
+                    let zombieHeadHexes = stateObject.zombieHeadHexes
+                    let currentHeadHex = stateObject.currentHeadHex
+                    let numArmsRemaining = stateObject.numArmsRemaining
+
+                    zombieOccupiedHexes.push(selectedHex)
+                    zombieHeadHexes[currentHeadHex].push(selectedHex)
+                    numArmsRemaining--
+
+                    //calculate how many arm opts there are
+                    let theSurroundingHexes = findSurroundingHexes(currentHeadHex)
+                    let numArmOptions = 0
+                    for (let hex of theSurroundingHexes) {
+                        if (!zombieOccupiedHexes.includes(hex)) numArmOptions++
+                    }
+                    let placeHeadOrArm = "arm"
+                    if (numArmOptions===0 || numArmsRemaining===0) {
+                        placeHeadOrArm = "head"
+                        zombieCount--
+                    }
+
+                    this.setState(
+                        {
+                            zombieOccupiedHexes: zombieOccupiedHexes.sort((a,b) => a-b),
+                            zombieHeadHexes: zombieHeadHexes,
+                            zombieCount: zombieCount,
+                            placeHeadOrArm: placeHeadOrArm,
+                            numArmsRemaining: numArmsRemaining
+                        }
+                    )
+                }
+                if (zombieCount===0) {
+                    this.setState({whoseTurn: "wait", humanOccupiedHexes: stateObject.hiddenHumanHexes})
+                    this.calcNewInfections(this.state)
+                }
+        }           
+    }
+
+    start() {
+        let stateObject = this.state
         let vaccinatedCount = stateObject.vaccinatedCount
-        let vaccineEffectiveness = stateObject.vaccineEffectiveness
+        let humanCount = stateObject.humanCount
         let zombieCount = stateObject.zombieCount
-        if ((humanCount===0 && vaccinatedCount===0) || zombieCount===0) return
+        let history = []
+        history[0] = {
+                humanCount: humanCount,
+                vaccinatedCount: vaccinatedCount,
+                zombieCount: zombieCount,
+                newInfections: zombieCount
+            }
+
+        this.setState({history: history, gameStarted: true})
+
+        if (stateObject.mode==="auto") this.nextRound(history, true)
+    }
+
+    nextRound(startHistory) {
+        let stateObject = this.state
+        if ((stateObject.humanCount===0 && stateObject.vaccinatedCount===0) || stateObject.zombieCount===0) return
+        let humanCount = stateObject.humanCount
+        let zombieCount = stateObject.zombieCount
+        let vaccinatedCount = stateObject.vaccinatedCount
+        let vaccination = stateObject.vaccination
         let numZombieArms = stateObject.numZombieArms
         let history = stateObject.history
+        if (history.length===0) history = startHistory
         let mortality = stateObject.mortality
         let mortalityNum = stateObject.mortalityNum
         let roundsCompleted = stateObject.roundsCompleted
 
-        if (stateObject.roundsCompleted===0) {
-            humanCount = stateObject.humanStartCount
-            zombieCount = stateObject.zombieStartCount
-            if (vaccination) vaccinatedCount = stateObject.vaccinatedStartCount
-            history[0] = {
-                    humanCount: humanCount,
-                    zombieCount: zombieCount,
-                    newInfections: zombieCount
-                }
-            if (vaccination) history[0].vaccinatedCount = vaccinatedCount
-        }
+        //mortality
         if (mortality && roundsCompleted >= mortalityNum) {
             zombieCount = zombieCount - history[roundsCompleted - mortalityNum].newInfections
         }
@@ -751,9 +953,7 @@ class App extends React.Component {
             //Each number of zombie arms has its own set of slots. Each zombie occupies one slot.
             //For each zombie:
             //1. A slot is randomly chosen from the set of unoccupied slots with the current maximum number of hexes.
-            //2. Unoccupied hexes which surround the chosen head hex are identified.
-
-            //{numArms: [[head, [arms], [head, [arms]]], []]}
+            //2. repeat
             let slotArray = [
                 [ //0 arms
                     []      //slot set 0
@@ -847,6 +1047,57 @@ class App extends React.Component {
 
         //------//
 
+        this.calcNewInfections(
+            {
+                humanCount: humanCount,
+                vaccinatedCount: vaccinatedCount,
+                zombieCount: zombieCount,
+                humanOccupiedHexes: humanOccupiedHexes,
+                vaccinatedOccupiedHexes: vaccinatedOccupiedHexes,
+                zombieOccupiedHexes: zombieOccupiedHexes,
+                history: history,
+            }
+        )
+
+        this.setState(
+            {
+                humanOccupiedHexes: humanOccupiedHexes.sort((a, b) => a-b),
+                vaccinatedOccupiedHexes: vaccinatedOccupiedHexes,
+                zombieHeadHexes: zombieHeadHexes
+            }
+        )
+    }
+
+    nextRoundHotseat() {
+        if ((this.state.humanCount===0 && this.state.vaccinatedCount===0) || this.state.zombieCount===0) return
+        this.setState(
+            {
+                whoseTurn: "Humans",
+                humanOccupiedHexes: [],
+                vaccinatedOccupiedHexes: [],
+                zombieOccupiedHexes: [],
+                zombieHeadHexes: []
+            }
+        )
+    }
+
+    calcNewInfections(inputObject) {
+        let stateObject = this.state
+        if (!stateObject.gameStarted) return
+        let roundsCompleted = stateObject.roundsCompleted
+        let vaccineEffectiveness = stateObject.vaccineEffectiveness
+        let mortality = stateObject.mortality
+        let mortalityNum = stateObject.mortalityNum
+
+        let history = inputObject.history
+        let humanCount = history[roundsCompleted].humanCount
+        let vaccinatedCount = history[roundsCompleted].vaccinatedCount
+        let zombieCount = history[roundsCompleted].zombieCount
+        let humanOccupiedHexes = inputObject.humanOccupiedHexes
+        if (stateObject.mode==="hotseat") humanOccupiedHexes = stateObject.hiddenHumanHexes
+        let vaccinatedOccupiedHexes = inputObject.vaccinatedOccupiedHexes
+        let zombieOccupiedHexes = inputObject.zombieOccupiedHexes
+
         let newInfections = 0
         let newVaccinatedInfections = 0
         for (let hex of zombieOccupiedHexes) {
@@ -858,26 +1109,24 @@ class App extends React.Component {
         }
         humanCount -= newInfections
         vaccinatedCount -= newVaccinatedInfections
-        zombieCount += newInfections
-        zombieCount += newVaccinatedInfections
-        history[roundsCompleted + 1] = 
+        zombieCount += (newInfections + newVaccinatedInfections)
+        roundsCompleted++
+        history[roundsCompleted] = 
             {
                 humanCount: humanCount,
                 zombieCount: zombieCount,
-                newInfections: newInfections + newVaccinatedInfections
+                newInfections: newInfections + newVaccinatedInfections,
+                vaccinatedCount: vaccinatedCount
             }
-        if (vaccination) history[roundsCompleted + 1].vaccinatedCount = vaccinatedCount
-
+        if (mortality && roundsCompleted >= mortalityNum) {
+            zombieCount -= history[roundsCompleted - mortalityNum].newInfections
+        }
         this.setState(
             {
-                humanOccupiedHexes: humanOccupiedHexes.sort((a, b) => a-b),
-                vaccinatedOccupiedHexes: vaccinatedOccupiedHexes,
-                zombieHeadHexes: zombieHeadHexes,
-                roundsCompleted: roundsCompleted + 1,
                 zombieCount: zombieCount,
                 humanCount: humanCount,
                 vaccinatedCount: vaccinatedCount,
-                numZombieArms: numZombieArms,
+                roundsCompleted: roundsCompleted,
                 history: history
             }
         )
@@ -891,10 +1140,15 @@ class App extends React.Component {
                 zombieOccupiedHexes: [],
                 vaccinatedOccupiedHexes: [],
                 zombieHeadHexes: makeZeroesArray(100),
-                humanCount: this.state.humanStartCount,
-                vaccinatedCount: this.state.vaccinatedStartCount,
-                zombieCount: this.state.zombieStartCount,
-                history: []
+                humanCount: this.state.history[0].humanCount || 50,
+                vaccinatedCount: this.state.history[0].vaccinatedCount || 0,
+                zombieCount: this.state.history[0].zombieCount || 1,
+                history: [],
+                gameStarted: false,
+                whoseTurn: "Humans",
+                placeHeadOrArm: "head",
+                currentHeadHex: 0,
+                numArmsRemaining: 0
             }
         )
     }
@@ -908,11 +1162,15 @@ class App extends React.Component {
             <div id="outer">
                 <div id="main">
                     {this.displayBoard(this.state)}
-                    {this.displayControls(this.state)}
+                    <div id="middle-div">
+                        {this.displayControls(this.state)}
+                        {this.displayStatusInfo(this.state)}
+                    </div>
+                    {this.displayHistoryTable(this.state.history, this.state.gameStarted)}
                 </div>
                 <label id="reference">
-                    Based on a game concept by Jim Powell and Matt Lewis: 
-                    <a href="https://digitalcommons.usu.edu/lemb/1/">https://digitalcommons.usu.edu/lemb/1/</a>.
+                    Based on a game concept by Jim Powell and Matt Lewis: <a href=
+                    "https://digitalcommons.usu.edu/lemb/1/">https://digitalcommons.usu.edu/lemb/1/</a>.
                 </label>
             </div>
         )
@@ -1008,3 +1266,8 @@ function isASubset(smallArray, bigArray) {
 export default App;
 
 //hotseat
+//graph
+//vaxx indicator
+
+//end message (for both)
+//put values for x and y

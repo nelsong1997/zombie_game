@@ -25,7 +25,7 @@ svg {
     margin-top: 5px;
 }
 
-label, table, th, td {
+label, table, th, td, p {
     font-family: "Arial"
 }
 
@@ -63,4 +63,8 @@ body, html, #root {
 
 #reference {
     margin: 10px;
+}
+
+#status-info {
+    max-width: 250px;
 }
