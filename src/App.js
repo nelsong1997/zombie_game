@@ -1,4 +1,6 @@
 import React from 'react';
+import sick_face from './sick_face.svg';
+import smile_face from './smile_face.svg';
 
 class App extends React.Component {
 	constructor() {
@@ -25,7 +27,9 @@ class App extends React.Component {
             placeHeadOrArm: "head",
             currentHeadHex: 0,
             numArmsRemaining: 0,
-            hiddenHumanHexes: []
+            hiddenHumanHexes: [],
+            hiddenVaccinatedHexes: [],
+            infectedVaccinatedHexes: []
         }
         this.start = this.start.bind(this)
         this.nextRound = this.nextRound.bind(this);
@@ -42,6 +46,7 @@ class App extends React.Component {
         let theVaccinated = []
         let theZombies = []
         let moreShapes = []
+        let faces = []
         for (let j=0; j<10; j++) { //j==columns
             let h = 0                   //h pushes column down if it's an even column
             if (j%2) h = Math.sqrt(3)/2
@@ -71,6 +76,12 @@ class App extends React.Component {
                             fontFamily="Arial" fontSize="1.75px" fill="lime" key={1000*j+100*i + 2}>x
                         </text>
                     )
+                    if (stateObject.infectedVaccinatedHexes.includes(10*j + i)) {
+                        faces.push(<img src={sick_face} alt="sick" style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}></img>)
+                    } else if (!stateObject.infectedVaccinatedHexes.includes(10*j + i)) {
+                        faces.push(<img src={smile_face} alt="healthy" style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}></img>)
+                    }
+                    console.log(faces)
                 }
                 if (stateObject.zombieHeadHexes[(10*j + i)]) {
                     for (let x=0; x<stateObject.zombieHeadHexes[(10*j + i)].length; x++) { //4-15
@@ -96,13 +107,16 @@ class App extends React.Component {
             }
         }
         return (
-            <svg viewBox="0 0 15.5 18.5">
-                {theHexagons}
-                {theZombies}
-                {moreShapes}
-                {theHumans}
-                {theVaccinated}
-            </svg>
+            <div>
+                <svg viewBox="0 0 15.5 18.5">
+                    {theHexagons}
+                    {theZombies}
+                    {moreShapes}
+                    {theHumans}
+                    {theVaccinated}
+                </svg>
+                {faces}
+            </div>
         )
     }
 
@@ -313,7 +327,7 @@ class App extends React.Component {
     }
 
     displayStatusInfo(stateObject) {
-        if (stateObject.mode==="auto" || !stateObject.gameStarted) return null
+        if (!stateObject.gameStarted) return null
         if (stateObject.whoseTurn==="Humans" || stateObject.whoseTurn==="Zombies") {
             let whoseTurnTextColor;
             let currentlyPlacingTypeColor;
@@ -362,10 +376,25 @@ class App extends React.Component {
                 waitEndMessage = [<p key="0"><strong style={{color: "red"}}>The Zombies win!</strong></p>]
             } else if (stateObject.zombieCount===0) {
                 waitEndMessage = [<p key="0"><strong style={{color: "blue"}}>The Humans win!</strong></p>]
+            } else if (stateObject.mode==="auto") waitEndMessage = null
+            let normalInfections = (
+                stateObject.history[stateObject.roundsCompleted].newInfections -
+                stateObject.infectedVaccinatedHexes.length
+            )
+            let vaccinatedInfections = stateObject.infectedVaccinatedHexes.length
+            let string0 = "humans were"
+            if (normalInfections===1) string0 = "human was"
+            let string1 = "humans were"
+            if (vaccinatedInfections===1) string1 = "human was"
+            let vaccinationPart = ""
+            if (stateObject.vaccination) {
+                vaccinationPart = ` and ${stateObject.infectedVaccinatedHexes.length} vaccinated ${string1} infected`
             }
+
             return (
                 <div id="status-info" className="column">
-                    <p>Round ended. x normal humans were infected and y vaccinated humans were infected.</p>
+                    <p>Round ended. {normalInfections} normal {string0} infected{vaccinationPart}.
+                    </p>
                     {waitEndMessage}
                 </div>
             )
@@ -378,7 +407,7 @@ class App extends React.Component {
             for (let round in history) {
                 let vaccinatedCountData = null
                 if (this.state.vaccination) vaccinatedCountData = [
-                    <td>{history[round].vaccinatedCount}</td>
+                    <td key={round}>{history[round].vaccinatedCount}</td>
                 ]
                 historyTableRows.push(
                     <tr key={round}>
@@ -391,7 +420,7 @@ class App extends React.Component {
                 )
             }
             let vaccinatedTableHeader = null
-            if (this.state.vaccination) vaccinatedTableHeader = [<th>Vaccinated Count</th>]
+            if (this.state.vaccination) vaccinatedTableHeader = [<th key="0">Vaccinated Count</th>]
             let historyTable = [
                 <table key="0">
                     <tbody>
@@ -471,7 +500,9 @@ class App extends React.Component {
                                 {
                                     whoseTurn: "Zombies",
                                     hiddenHumanHexes: stateObject.humanOccupiedHexes,
-                                    humanOccupiedHexes: []
+                                    hiddenVaccinatedHexes: stateObject.vaccinatedOccupiedHexes,
+                                    humanOccupiedHexes: [],
+                                    vaccinatedOccupiedHexes: []
                                 }
                             )
 
@@ -544,7 +575,13 @@ class App extends React.Component {
                     )
                 }
                 if (zombieCount===0) {
-                    this.setState({whoseTurn: "wait", humanOccupiedHexes: stateObject.hiddenHumanHexes})
+                    this.setState(
+                        {
+                            whoseTurn: "wait",
+                            humanOccupiedHexes: stateObject.hiddenHumanHexes,
+                            vaccinatedOccupiedHexes: stateObject.hiddenVaccinatedHexes
+                        }
+                    )
                     this.calcNewInfections(this.state)
                 }
         }           
@@ -565,7 +602,10 @@ class App extends React.Component {
 
         this.setState({history: history, gameStarted: true})
 
-        if (stateObject.mode==="auto") this.nextRound(history, true)
+        if (stateObject.mode==="auto") {
+            this.nextRound(history, true)
+            this.setState({whoseTurn: "wait"})
+        }
     }
 
     nextRound(startHistory) {
@@ -1083,7 +1123,6 @@ class App extends React.Component {
 
     calcNewInfections(inputObject) {
         let stateObject = this.state
-        if (!stateObject.gameStarted) return
         let roundsCompleted = stateObject.roundsCompleted
         let vaccineEffectiveness = stateObject.vaccineEffectiveness
         let mortality = stateObject.mortality
@@ -1094,17 +1133,24 @@ class App extends React.Component {
         let vaccinatedCount = history[roundsCompleted].vaccinatedCount
         let zombieCount = history[roundsCompleted].zombieCount
         let humanOccupiedHexes = inputObject.humanOccupiedHexes
-        if (stateObject.mode==="hotseat") humanOccupiedHexes = stateObject.hiddenHumanHexes
         let vaccinatedOccupiedHexes = inputObject.vaccinatedOccupiedHexes
+        if (stateObject.mode==="hotseat") {
+            humanOccupiedHexes = stateObject.hiddenHumanHexes
+            vaccinatedOccupiedHexes = stateObject.hiddenVaccinatedHexes
+        }
         let zombieOccupiedHexes = inputObject.zombieOccupiedHexes
 
+        let infectedVaccinatedHexes = []
         let newInfections = 0
         let newVaccinatedInfections = 0
         for (let hex of zombieOccupiedHexes) {
             if (humanOccupiedHexes.includes(hex)) newInfections++
             if (vaccinatedOccupiedHexes.includes(hex)) {
                 let roll = Math.random()
-                if (roll>=(vaccineEffectiveness/100)) newVaccinatedInfections++
+                if (roll>=(vaccineEffectiveness/100)) {
+                    newVaccinatedInfections++
+                    infectedVaccinatedHexes.push(hex)
+                }
             }
         }
         humanCount -= newInfections
@@ -1127,7 +1173,8 @@ class App extends React.Component {
                 humanCount: humanCount,
                 vaccinatedCount: vaccinatedCount,
                 roundsCompleted: roundsCompleted,
-                history: history
+                history: history,
+                infectedVaccinatedHexes: infectedVaccinatedHexes
             }
         )
     }
@@ -1265,9 +1312,5 @@ function isASubset(smallArray, bigArray) {
 
 export default App;
 
-//hotseat
 //graph
-//vaxx indicator
-
-//end message (for both)
-//put values for x and y
+//autofill
