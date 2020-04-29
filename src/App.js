@@ -472,7 +472,7 @@ class App extends React.Component {
         } else return null
     }
 
-    createGraph(history, gameStarted, vaccination, mortality) {
+    createGraph(history, vaccination, mortality) {
         let theData = []
         theData[0] = {
             name: "Human Count",
@@ -525,6 +525,7 @@ class App extends React.Component {
                 theData[3].dataPoints.push({x: round, y: theNumber})
             }
         }
+        console.log(mortality, theData[3])
         const options = {
             animationEnabled: false,
             exportEnabled: false,
