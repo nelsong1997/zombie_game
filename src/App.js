@@ -1,8 +1,8 @@
 import React from 'react';
 import sick_face from './sick_face.svg';
 import smile_face from './smile_face.svg';
-var CanvasJSReact = require('./canvasjs.react');
-var CanvasJSChart = CanvasJSReact.default.CanvasJSChart;
+// var CanvasJSReact = require('./canvasjs.react');
+// var CanvasJSChart = CanvasJSReact.default.CanvasJSChart;
 
 class App extends React.Component {
 	constructor() {
@@ -472,85 +472,85 @@ class App extends React.Component {
         } else return null
     }
 
-    createGraph(history, gameStarted, vaccination, mortality) {
-        let theData = []
-        theData[0] = {
-            name: "Human Count",
-            color: "blue",
-            showInLegend: true,
-            type: "line",
-            toolTipContent: "Round {x}: {y}",
-            dataPoints: []
-        }
-        for (let round in history) { //humanCounts
-            theData[0].dataPoints.push({x: round, y: history[round].humanCount})
-        }
-        theData[1] = {
-            name: "Zombie Count",
-            color: "red",
-            showInLegend: true,
-            type: "line",
-            toolTipContent: "Round {x}: {y}",
-            dataPoints: []
-        }
-        for (let round in history) { //zombieCounts
-            theData[1].dataPoints.push({x: round, y: history[round].zombieCount})
-        }
-        if (vaccination) {
-            theData[2] = {
-                name: "Vaccinated Count",
-                color: "lime",
-                showInLegend: true,
-                type: "line",
-                toolTipContent: "Round {x}: {y}",
-                dataPoints: []
-            }
-            for (let round in history) { //vaccinatedCounts
-                theData[2].dataPoints.push({x: round, y: history[round].vaccinatedCount})
-            }
-        }
-        if (mortality) {
-            theData[3] = {
-                name: "Removed Count",
-                color: "purple",
-                showInLegend: true,
-                type: "line",
-                toolTipContent: "Round {x}: {y}",
-                dataPoints: []
-            }
-            let totalPopulation = history[0].zombieCount + history[0].humanCount + history[0].vaccinatedCount
-            for (let round in history) { //removed
-                let currentOtherPop = history[round].zombieCount + history[round].humanCount + history[round].vaccinatedCount
-                let theNumber = totalPopulation - currentOtherPop
-                theData[3].dataPoints.push({x: round, y: theNumber})
-            }
-        }
-        const options = {
-            animationEnabled: false,
-            exportEnabled: false,
-            theme: "light2", // "light1", "dark1", "dark2"
-            axisY: {
-                title: "Population Count",
-                includeZero: true,
-                suffix: ""
-            },
-            axisX: {
-                title: "Round",
-                prefix: "",
-                interval: 1,
-                maximum: history.length
-            },
-            data: theData
-        }
-        return ( 
-            [ 
-                <div id="graph">
-                    <CanvasJSChart options = {options}/>
-                </div>
+    // createGraph(history, gameStarted, vaccination, mortality) {
+    //     let theData = []
+    //     theData[0] = {
+    //         name: "Human Count",
+    //         color: "blue",
+    //         showInLegend: true,
+    //         type: "line",
+    //         toolTipContent: "Round {x}: {y}",
+    //         dataPoints: []
+    //     }
+    //     for (let round in history) { //humanCounts
+    //         theData[0].dataPoints.push({x: round, y: history[round].humanCount})
+    //     }
+    //     theData[1] = {
+    //         name: "Zombie Count",
+    //         color: "red",
+    //         showInLegend: true,
+    //         type: "line",
+    //         toolTipContent: "Round {x}: {y}",
+    //         dataPoints: []
+    //     }
+    //     for (let round in history) { //zombieCounts
+    //         theData[1].dataPoints.push({x: round, y: history[round].zombieCount})
+    //     }
+    //     if (vaccination) {
+    //         theData[2] = {
+    //             name: "Vaccinated Count",
+    //             color: "lime",
+    //             showInLegend: true,
+    //             type: "line",
+    //             toolTipContent: "Round {x}: {y}",
+    //             dataPoints: []
+    //         }
+    //         for (let round in history) { //vaccinatedCounts
+    //             theData[2].dataPoints.push({x: round, y: history[round].vaccinatedCount})
+    //         }
+    //     }
+    //     if (mortality) {
+    //         theData[3] = {
+    //             name: "Removed Count",
+    //             color: "purple",
+    //             showInLegend: true,
+    //             type: "line",
+    //             toolTipContent: "Round {x}: {y}",
+    //             dataPoints: []
+    //         }
+    //         let totalPopulation = history[0].zombieCount + history[0].humanCount + history[0].vaccinatedCount
+    //         for (let round in history) { //removed
+    //             let currentOtherPop = history[round].zombieCount + history[round].humanCount + history[round].vaccinatedCount
+    //             let theNumber = totalPopulation - currentOtherPop
+    //             theData[3].dataPoints.push({x: round, y: theNumber})
+    //         }
+    //     }
+    //     const options = {
+    //         animationEnabled: false,
+    //         exportEnabled: false,
+    //         theme: "light2", // "light1", "dark1", "dark2"
+    //         axisY: {
+    //             title: "Population Count",
+    //             includeZero: true,
+    //             suffix: ""
+    //         },
+    //         axisX: {
+    //             title: "Round",
+    //             prefix: "",
+    //             interval: 1,
+    //             maximum: history.length
+    //         },
+    //         data: theData
+    //     }
+    //     return ( 
+    //         [ 
+    //             <div id="graph">
+    //                 <CanvasJSChart options = {options}/>
+    //             </div>
 
-            ]
-        )   
-    }
+    //         ]
+    //     )   
+    // }
 
     handleInputChange(e) {
         let property = e.target.name
@@ -1466,11 +1466,11 @@ class App extends React.Component {
                 roundsCompleted: roundsCompleted,
                 history: history,
                 infectedVaccinatedHexes: infectedVaccinatedHexes,
-                theGraph: this.createGraph(
-                    history,
-                    stateObject.vaccination,
-                    mortality
-                )
+                // theGraph: this.createGraph(
+                //     history,
+                //     stateObject.vaccination,
+                //     mortality
+                // )
             }
         )
     }
@@ -1491,7 +1491,8 @@ class App extends React.Component {
                 whoseTurn: "Humans",
                 placeHeadOrArm: "head",
                 currentHeadHex: 0,
-                numArmsRemaining: 0
+                numArmsRemaining: 0,
+                theGraph: null
             }
         )
     }
@@ -1511,7 +1512,7 @@ class App extends React.Component {
                     </div>
                     <div id="data">
                         {this.displayHistoryTable(this.state.history, this.state.gameStarted)}
-                        {this.state.theGraph}
+                        {/* {this.state.theGraph} */}
                     </div>
                 </div>
                 <label id="reference">
