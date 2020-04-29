@@ -1446,6 +1446,16 @@ class App extends React.Component {
         if (mortality && roundsCompleted >= mortalityNum) { //we have to do this twice because the
                 //first time took from history, which is before we subtracted
             zombieCount -= history[roundsCompleted - mortalityNum].newInfections
+            if (zombieCount===0) {
+                history.push(
+                    {
+                        humanCount: humanCount,
+                        zombieCount: 0,
+                        newInfections: 0,
+                        vaccinatedCount: vaccinatedCount
+                    }
+                )
+            }
         }
         this.setState(
             {
