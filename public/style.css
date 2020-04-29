@@ -83,3 +83,15 @@ img {
     width: 30px;
     position: absolute;
 }
+
+#data {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    width: 700px;
+}
+
+#graph {
+    margin-top: 15px;
+}
