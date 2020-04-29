@@ -468,7 +468,11 @@ class App extends React.Component {
                     </tbody>
                 </table>
             ]
-            return historyTable
+            return (
+                <div>
+                    {historyTable}
+                </div>
+            )
         } else return null
     }
 
