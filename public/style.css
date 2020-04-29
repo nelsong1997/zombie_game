@@ -95,3 +95,7 @@ img {
 #graph {
     margin-top: 15px;
 }
+
+.recharts-surface {
+    height: 300px;
+}

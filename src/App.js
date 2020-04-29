@@ -1,8 +1,7 @@
 import React from 'react';
 import sick_face from './sick_face.svg';
 import smile_face from './smile_face.svg';
-var CanvasJSReact = require('./canvasjs.react');
-var CanvasJSChart = CanvasJSReact.default.CanvasJSChart;
+import { LineChart, Line, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 class App extends React.Component {
 	constructor() {
@@ -477,82 +476,42 @@ class App extends React.Component {
     }
 
     createGraph(history, vaccination, mortality) {
-        let theData = []
-        theData[0] = {
-            name: "Human Count",
-            color: "blue",
-            showInLegend: true,
-            type: "line",
-            toolTipContent: "Round {x}: {y}",
-            dataPoints: []
-        }
+        let humanData = []
         for (let round in history) { //humanCounts
-            theData[0].dataPoints.push({x: round, y: history[round].humanCount})
+            humanData.push({round: round, humanCount: history[round].humanCount})
         }
-        theData[1] = {
-            name: "Zombie Count",
-            color: "red",
-            showInLegend: true,
-            type: "line",
-            toolTipContent: "Round {x}: {y}",
-            dataPoints: []
-        }
+        let zombieData = []
         for (let round in history) { //zombieCounts
-            theData[1].dataPoints.push({x: round, y: history[round].zombieCount})
+            zombieData.push({round: round, zombieCount: history[round].zombieCount})
         }
         if (vaccination) {
-            theData[2] = {
-                name: "Vaccinated Count",
-                color: "lime",
-                showInLegend: true,
-                type: "line",
-                toolTipContent: "Round {x}: {y}",
-                dataPoints: []
-            }
+            let vaccinatedData = []
             for (let round in history) { //vaccinatedCounts
-                theData[2].dataPoints.push({x: round, y: history[round].vaccinatedCount})
+                vaccinatedData.push({round: round, vaccinatedCount: history[round].vaccinatedCount})
             }
         }
         if (mortality) {
-            theData[3] = {
-                name: "Removed Count",
-                color: "purple",
-                showInLegend: true,
-                type: "line",
-                toolTipContent: "Round {x}: {y}",
-                dataPoints: []
-            }
+            let removedData = []
             let totalPopulation = history[0].zombieCount + history[0].humanCount + history[0].vaccinatedCount
             for (let round in history) { //removed
                 let currentOtherPop = history[round].zombieCount + history[round].humanCount + history[round].vaccinatedCount
                 let theNumber = totalPopulation - currentOtherPop
-                theData[3].dataPoints.push({x: round, y: theNumber})
+                removedData.push({round: round, removedCount: theNumber})
             }
         }
-        console.log(mortality, theData[3])
-        const options = {
-            animationEnabled: false,
-            exportEnabled: false,
-            theme: "light2", // "light1", "dark1", "dark2"
-            axisY: {
-                title: "Population Count",
-                includeZero: true,
-                suffix: ""
-            },
-            axisX: {
-                title: "Round",
-                prefix: "",
-                interval: 1,
-                maximum: history.length
-            },
-            data: theData
-        }
-        return ( 
-            [ 
-                <div id="graph">
-                    <CanvasJSChart options = {options}/>
-                </div>
+        const data = [{round: 0, humanCount: 400, zombieCount: 100}, {round: 1, humanCount: 300, zombieCount: 200}];
 
+        return (
+            [
+                <div id="graph" key="0">
+                    <LineChart width={700} height={300} data={data}>
+                        <Line type="monotone" dataKey="humanCount" stroke="#8884d8" />
+                        <Line type="monotone" dataKey="zombieCount" stroke="#000000" />
+                        <CartesianGrid stroke="#ccc" />
+                        <XAxis dataKey="round" />
+                        <YAxis />
+                    </LineChart>
+                </div>
             ]
         )   
     }
