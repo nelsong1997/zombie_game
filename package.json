@@ -7,10 +7,14 @@
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
     "canvasjs": "^1.8.3",
+    "fibers": "^5.0.0",
+    "node-sass": "^4.14.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-scripts": "^3.4.1",
-    "recharts": "^1.8.5"
+    "recharts": "^1.8.5",
+    "sass": "^1.26.5",
+    "typescript": "^3.8.3"
   },
   "scripts": {
     "start": "react-scripts start",
