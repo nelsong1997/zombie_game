@@ -30,8 +30,7 @@ class App extends React.Component {
             numArmsRemaining: 0,
             hiddenHumanHexes: [],
             hiddenVaccinatedHexes: [],
-            infectedVaccinatedHexes: [],
-            theGraph: null
+            infectedVaccinatedHexes: []
         }
         this.start = this.start.bind(this)
         this.nextRound = this.nextRound.bind(this);
@@ -475,47 +474,86 @@ class App extends React.Component {
         } else return null
     }
 
-    createGraph(history, vaccination, mortality) {
-        let humanData = []
-        for (let round in history) { //humanCounts
-            humanData.push({round: round, humanCount: history[round].humanCount})
-        }
-        let zombieData = []
-        for (let round in history) { //zombieCounts
-            zombieData.push({round: round, zombieCount: history[round].zombieCount})
-        }
-        if (vaccination) {
-            let vaccinatedData = []
-            for (let round in history) { //vaccinatedCounts
-                vaccinatedData.push({round: round, vaccinatedCount: history[round].vaccinatedCount})
+    displayHistoryGraph(history, gameStarted, vaccination, mortality) {
+        if (gameStarted) {
+            let theData = []
+            theData[0] = {
+                name: "Human Count",
+                color: "blue",
+                showInLegend: true,
+                type: "line",
+                toolTipContent: "Round {x}: {y}",
+                dataPoints: []
             }
-        }
-        if (mortality) {
-            let removedData = []
-            let totalPopulation = history[0].zombieCount + history[0].humanCount + history[0].vaccinatedCount
-            for (let round in history) { //removed
-                let currentOtherPop = history[round].zombieCount + history[round].humanCount + history[round].vaccinatedCount
-                let theNumber = totalPopulation - currentOtherPop
-                removedData.push({round: round, removedCount: theNumber})
+            for (let round in history) { //humanCounts
+                theData[0].dataPoints.push({x: round, y: history[round].humanCount})
             }
-        }
-        const data = [{round: 0, humanCount: 400, zombieCount: 100}, {round: 1, humanCount: 300, zombieCount: 200}];
-
-        return (
-            [
-                <div id="graph" key="0">
-                    <LineChart width={700} height={300} data={data}>
-                        <Line type="monotone" dataKey="humanCount" stroke="#8884d8" />
-                        <Line type="monotone" dataKey="zombieCount" stroke="#000000" />
-                        <CartesianGrid stroke="#ccc" />
-                        <XAxis dataKey="round" />
-                        <YAxis />
-                    </LineChart>
+            theData[1] = {
+                name: "Zombie Count",
+                color: "red",
+                showInLegend: true,
+                type: "line",
+                toolTipContent: "Round {x}: {y}",
+                dataPoints: []
+            }
+            for (let round in history) { //zombieCounts
+                theData[1].dataPoints.push({x: round, y: history[round].zombieCount})
+            }
+            if (vaccination) {
+                theData[2] = {
+                    name: "Vaccinated Count",
+                    color: "lime",
+                    showInLegend: true,
+                    type: "line",
+                    toolTipContent: "Round {x}: {y}",
+                    dataPoints: []
+                }
+                for (let round in history) { //vaccinatedCounts
+                    theData[2].dataPoints.push({x: round, y: history[round].vaccinatedCount})
+                }
+            }
+            if (mortality) {
+                theData[3] = {
+                    name: "Removed Count",
+                    color: "purple",
+                    showInLegend: true,
+                    type: "line",
+                    toolTipContent: "Round {x}: {y}",
+                    dataPoints: []
+                }
+                let totalPopulation = history[0].zombieCount + history[0].humanCount + history[0].vaccinatedCount
+                for (let round in history) { //removed
+                    let currentOtherPop = history[round].zombieCount + history[round].humanCount + history[round].vaccinatedCount
+                    let theNumber = totalPopulation - currentOtherPop
+                    theData[3].dataPoints.push({x: round, y: theNumber})
+                }
+            }
+            console.log(theData)
+            const options = {
+                animationEnabled: false,
+                exportEnabled: false,
+                theme: "light2", // "light1", "dark1", "dark2"
+                axisY: {
+                    title: "Population Count",
+                    includeZero: true,
+                    suffix: ""
+                },
+                axisX: {
+                    title: "Round",
+                    prefix: "",
+                    interval: 1,
+                    maximum: history.length
+                },
+                data: theData
+            }
+            return (
+                <div id="graph">
+                    <CanvasJSChart options = {options}/>
                 </div>
-            ]
-        )   
+            )
+        } else return null
     }
-
+    
     handleInputChange(e) {
         let property = e.target.name
         let value = e.target.value
@@ -1429,12 +1467,7 @@ class App extends React.Component {
                 vaccinatedCount: vaccinatedCount,
                 roundsCompleted: roundsCompleted,
                 history: history,
-                infectedVaccinatedHexes: infectedVaccinatedHexes,
-                theGraph: this.createGraph(
-                    history,
-                    stateObject.vaccination,
-                    mortality
-                )
+                infectedVaccinatedHexes: infectedVaccinatedHexes
             }
         )
     }
@@ -1476,7 +1509,14 @@ class App extends React.Component {
                     </div>
                     <div id="data">
                         {this.displayHistoryTable(this.state.history, this.state.gameStarted)}
-                        {this.state.theGraph}
+                        {
+                            this.displayHistoryGraph(
+                                this.state.history, 
+                                this.state.gameStarted,
+                                this.state.vaccination,
+                                this.state.mortality
+                            )
+                        }
                     </div>
                 </div>
                 <label id="reference">
