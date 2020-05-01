@@ -1,8 +1,8 @@
 import React from 'react';
 import sick_face from './sick_face.svg';
 import smile_face from './smile_face.svg';
-// import CanvasJSReact from './canvasjs.react'
-// var CanvasJSChart = CanvasJSReact.CanvasJSChart;
+import CanvasJSReact from './canvasjs.react'
+var CanvasJSChart = CanvasJSReact.CanvasJSChart;
 
 class App extends React.Component {
 	constructor() {
@@ -549,7 +549,7 @@ class App extends React.Component {
         return ( 
             [ 
                 <div id="graph" key="0">
-                    {/* <CanvasJSChart options = {options}/> */}
+                    <CanvasJSChart options = {options}/>
                 </div>
 
             ]
