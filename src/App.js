@@ -548,7 +548,7 @@ class App extends React.Component {
         }
         return ( 
             [ 
-                <div id="graph">
+                <div id="graph" key="0">
                     <CanvasJSChart options = {options}/>
                 </div>
 
