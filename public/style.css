@@ -61,10 +61,6 @@ body, html, #root {
     margin: 0px;
 }
 
-#reference {
-    margin: 10px;
-}
-
 #status-info {
     max-width: 250px;
 }
