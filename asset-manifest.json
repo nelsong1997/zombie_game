@@ -1,0 +1,21 @@
+{
+  "files": {
+    "main.js": "/zombie_game/static/js/main.e19cb0f7.chunk.js",
+    "main.js.map": "/zombie_game/static/js/main.e19cb0f7.chunk.js.map",
+    "runtime-main.js": "/zombie_game/static/js/runtime-main.e731e650.js",
+    "runtime-main.js.map": "/zombie_game/static/js/runtime-main.e731e650.js.map",
+    "static/js/2.2bf9e416.chunk.js": "/zombie_game/static/js/2.2bf9e416.chunk.js",
+    "static/js/2.2bf9e416.chunk.js.map": "/zombie_game/static/js/2.2bf9e416.chunk.js.map",
+    "index.html": "/zombie_game/index.html",
+    "precache-manifest.28b4df648ce7a524cf76a80beb8df09a.js": "/zombie_game/precache-manifest.28b4df648ce7a524cf76a80beb8df09a.js",
+    "service-worker.js": "/zombie_game/service-worker.js",
+    "static/js/2.2bf9e416.chunk.js.LICENSE.txt": "/zombie_game/static/js/2.2bf9e416.chunk.js.LICENSE.txt",
+    "static/media/sick_face.svg": "/zombie_game/static/media/sick_face.5821f5c6.svg",
+    "static/media/smile_face.svg": "/zombie_game/static/media/smile_face.56108866.svg"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.e731e650.js",
+    "static/js/2.2bf9e416.chunk.js",
+    "static/js/main.e19cb0f7.chunk.js"
+  ]
+}
