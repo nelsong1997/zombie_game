@@ -1,7 +1,9 @@
 import React from 'react';
+import Help from './help.js'
 import sick_face from './sick_face.svg';
 import smile_face from './smile_face.svg';
 import CanvasJSReact from './canvasjs.react'
+import './style.css'
 var CanvasJSChart = CanvasJSReact.CanvasJSChart;
 
 class App extends React.Component {
@@ -32,7 +34,8 @@ class App extends React.Component {
             hiddenHumanHexes: [],
             hiddenVaccinatedHexes: [],
             infectedVaccinatedHexes: [],
-            theGraph: null
+            theGraph: null,
+            currentPage: "main"
         }
         this.start = this.start.bind(this)
         this.nextRound = this.nextRound.bind(this);
@@ -44,6 +47,7 @@ class App extends React.Component {
         this.autofill = this.autofill.bind(this);
         this.autofillZombies = this.autofillZombies.bind(this);
         this.autofillHumans = this.autofillHumans.bind(this);
+        this.changePage = this.changePage.bind(this);
     }
 
     displayBoard(stateObject) {
@@ -83,9 +87,9 @@ class App extends React.Component {
                         </text>
                     )
                     if (stateObject.infectedVaccinatedHexes.includes(10*j + i) && stateObject.zombieOccupiedHexes.includes(10*j + i)) {
-                        faces.push(<img src={sick_face} alt="sick" style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}></img>)
+                        faces.push(<img src={sick_face} alt="sick" className="emoji" style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}></img>)
                     } else if (!stateObject.infectedVaccinatedHexes.includes(10*j + i) && stateObject.zombieOccupiedHexes.includes(10*j + i)) {
-                        faces.push(<img src={smile_face} alt="healthy" style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}></img>)
+                        faces.push(<img src={smile_face} alt="healthy" className="emoji" style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}></img>)
                     }
                 }
                 if (stateObject.zombieHeadHexes[(10*j + i)]) {
@@ -1501,30 +1505,49 @@ class App extends React.Component {
         )
     }
 
+    changePage() {
+        if (this.state.currentPage==="main") this.setState({currentPage: "help"})
+        else this.setState({currentPage: "main"})
+        
+    }
+
 //------------------------------------------------------------------------------------------------------------------------//
 
 //------------------------------------------------------------------------------------------------------------------------//
 
     render() {
-        return (
-            <div id="outer">
-                <div id="main">
-                    {this.displayBoard(this.state)}
-                    <div id="middle-div">
-                        {this.displayControls(this.state)}
-                        {this.displayStatusInfo(this.state)}
+        if (this.state.currentPage==="main") {
+            return (
+                <div id="outer">
+                    <div id="main">
+                        {this.displayBoard(this.state)}
+                        <div id="middle-div">
+                            {this.displayControls(this.state)}
+                            {this.displayStatusInfo(this.state)}
+                        </div>
+                        <div id="data">
+                            {this.displayHistoryTable(this.state.history, this.state.gameStarted)}
+                            {this.state.theGraph}
+                        </div>
                     </div>
-                    <div id="data">
-                        {this.displayHistoryTable(this.state.history, this.state.gameStarted)}
-                        {this.state.theGraph}
+                    <div id="bottom-text">
+                        <p style={{color: "blue", textDecoration: "underline", cursor: "pointer"}} onClick={this.changePage}>
+                            Help/Guide
+                        </p>
+                        <label>
+                            Based on a game concept by Jim Powell and Matt Lewis: <a href=
+                            "https://digitalcommons.usu.edu/lemb/1/">https://digitalcommons.usu.edu/lemb/1/</a>.
+                        </label>
                     </div>
                 </div>
-                <label id="reference">
-                    Based on a game concept by Jim Powell and Matt Lewis: <a href=
-                    "https://digitalcommons.usu.edu/lemb/1/">https://digitalcommons.usu.edu/lemb/1/</a>.
-                </label>
-            </div>
-        )
+            )
+        } else if (this.state.currentPage==="help") {
+            return (
+                <Help
+                    changePage={this.changePage}
+                />
+            )
+        }
     }
 }
 
