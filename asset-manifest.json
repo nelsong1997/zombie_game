@@ -1,21 +1,26 @@
 {
   "files": {
-    "main.js": "/zombie_game/static/js/main.e19cb0f7.chunk.js",
-    "main.js.map": "/zombie_game/static/js/main.e19cb0f7.chunk.js.map",
+    "main.css": "/zombie_game/static/css/main.565a5d26.chunk.css",
+    "main.js": "/zombie_game/static/js/main.677e244d.chunk.js",
+    "main.js.map": "/zombie_game/static/js/main.677e244d.chunk.js.map",
     "runtime-main.js": "/zombie_game/static/js/runtime-main.e731e650.js",
     "runtime-main.js.map": "/zombie_game/static/js/runtime-main.e731e650.js.map",
-    "static/js/2.2bf9e416.chunk.js": "/zombie_game/static/js/2.2bf9e416.chunk.js",
-    "static/js/2.2bf9e416.chunk.js.map": "/zombie_game/static/js/2.2bf9e416.chunk.js.map",
+    "static/js/2.5883ed9b.chunk.js": "/zombie_game/static/js/2.5883ed9b.chunk.js",
+    "static/js/2.5883ed9b.chunk.js.map": "/zombie_game/static/js/2.5883ed9b.chunk.js.map",
     "index.html": "/zombie_game/index.html",
-    "precache-manifest.28b4df648ce7a524cf76a80beb8df09a.js": "/zombie_game/precache-manifest.28b4df648ce7a524cf76a80beb8df09a.js",
+    "precache-manifest.b98fd26b41ae3152afe231876ae12ff3.js": "/zombie_game/precache-manifest.b98fd26b41ae3152afe231876ae12ff3.js",
     "service-worker.js": "/zombie_game/service-worker.js",
-    "static/js/2.2bf9e416.chunk.js.LICENSE.txt": "/zombie_game/static/js/2.2bf9e416.chunk.js.LICENSE.txt",
+    "static/css/main.565a5d26.chunk.css.map": "/zombie_game/static/css/main.565a5d26.chunk.css.map",
+    "static/js/2.5883ed9b.chunk.js.LICENSE.txt": "/zombie_game/static/js/2.5883ed9b.chunk.js.LICENSE.txt",
     "static/media/sick_face.svg": "/zombie_game/static/media/sick_face.5821f5c6.svg",
-    "static/media/smile_face.svg": "/zombie_game/static/media/smile_face.56108866.svg"
+    "static/media/smile_face.svg": "/zombie_game/static/media/smile_face.56108866.svg",
+    "static/media/vaccination.png": "/zombie_game/static/media/vaccination.ef6b8522.png",
+    "static/media/zombieArms.png": "/zombie_game/static/media/zombieArms.befdf178.png"
   },
   "entrypoints": [
     "static/js/runtime-main.e731e650.js",
-    "static/js/2.2bf9e416.chunk.js",
-    "static/js/main.e19cb0f7.chunk.js"
+    "static/js/2.5883ed9b.chunk.js",
+    "static/css/main.565a5d26.chunk.css",
+    "static/js/main.677e244d.chunk.js"
   ]
 }
