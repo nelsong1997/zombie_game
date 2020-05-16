@@ -1,10 +1,10 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "f5297792d4811ee75024f02d0a14f7aa",
+    "revision": "4168d2d5c7f06d85d4999544b6c6d525",
     "url": "/zombie_game/index.html"
   },
   {
-    "revision": "5278eecc43f844f1e9d9",
+    "revision": "7db38ccf37ce872d3750",
     "url": "/zombie_game/static/css/main.565a5d26.chunk.css"
   },
   {
@@ -16,20 +16,20 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/zombie_game/static/js/2.5883ed9b.chunk.js.LICENSE.txt"
   },
   {
-    "revision": "5278eecc43f844f1e9d9",
-    "url": "/zombie_game/static/js/main.677e244d.chunk.js"
+    "revision": "7db38ccf37ce872d3750",
+    "url": "/zombie_game/static/js/main.affda505.chunk.js"
   },
   {
     "revision": "2237318cead6b839a2cf",
     "url": "/zombie_game/static/js/runtime-main.e731e650.js"
   },
   {
-    "revision": "5821f5c64dbde1fd2675b41227407b1d",
-    "url": "/zombie_game/static/media/sick_face.5821f5c6.svg"
+    "revision": "5f93c0fb9c781505f7ca664180f68221",
+    "url": "/zombie_game/static/media/sick_face.5f93c0fb.svg"
   },
   {
-    "revision": "561088666d8590d14140b168c3febe94",
-    "url": "/zombie_game/static/media/smile_face.56108866.svg"
+    "revision": "0a29229cd5d748ddfeea48fd4d2f2cfd",
+    "url": "/zombie_game/static/media/smile_face.0a29229c.svg"
   },
   {
     "revision": "ef6b85224dfebf93bbdd8effdda97844",
