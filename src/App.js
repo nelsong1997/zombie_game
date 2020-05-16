@@ -87,9 +87,18 @@ class App extends React.Component {
                         </text>
                     )
                     if (stateObject.infectedVaccinatedHexes.includes(10*j + i) && stateObject.zombieOccupiedHexes.includes(10*j + i)) {
-                        faces.push(<img src={sick_face} alt="sick" className="emoji" style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}></img>)
+                        faces.push(
+                            <img 
+                                src={sick_face} alt="sick" className="emoji" key={10*j+i}
+                                style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}>
+                            </img>
+                        )
                     } else if (!stateObject.infectedVaccinatedHexes.includes(10*j + i) && stateObject.zombieOccupiedHexes.includes(10*j + i)) {
-                        faces.push(<img src={smile_face} alt="healthy" className="emoji" style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}></img>)
+                        faces.push(
+                            <img
+                                src={smile_face} alt="healthy" className="emoji" key={10*j+i}
+                                style={{left: (1.5*j + 1.55)*43.226, top: (k+1.3 - .55)*43.226}}>
+                            </img>)
                     }
                 }
                 if (stateObject.zombieHeadHexes[(10*j + i)]) {
@@ -482,7 +491,8 @@ class App extends React.Component {
 
     createGraph(history, vaccination, mortality) {
         let theData = []
-        theData[0] = {
+        let curveNum = 0 //humans => curve 0, zombs => curve 1, etc.
+        theData[curveNum] = {
             name: "Human Count",
             color: "blue",
             showInLegend: true,
@@ -491,9 +501,11 @@ class App extends React.Component {
             dataPoints: []
         }
         for (let round in history) { //humanCounts
-            theData[0].dataPoints.push({x: round, y: history[round].humanCount})
+            theData[curveNum].dataPoints.push({x: round, y: history[round].humanCount})
         }
-        theData[1] = {
+        curveNum++
+
+        theData[curveNum] = {
             name: "Zombie Count",
             color: "red",
             showInLegend: true,
@@ -502,10 +514,12 @@ class App extends React.Component {
             dataPoints: []
         }
         for (let round in history) { //zombieCounts
-            theData[1].dataPoints.push({x: round, y: history[round].zombieCount})
+            theData[curveNum].dataPoints.push({x: round, y: history[round].zombieCount})
         }
+        curveNum++
+
         if (vaccination) {
-            theData[2] = {
+            theData[curveNum] = {
                 name: "Vaccinated Count",
                 color: "lime",
                 showInLegend: true,
@@ -514,11 +528,12 @@ class App extends React.Component {
                 dataPoints: []
             }
             for (let round in history) { //vaccinatedCounts
-                theData[2].dataPoints.push({x: round, y: history[round].vaccinatedCount})
+                theData[curveNum].dataPoints.push({x: round, y: history[round].vaccinatedCount})
             }
+            curveNum++
         }
         if (mortality) {
-            theData[3] = {
+            theData[curveNum] = {
                 name: "Removed Count",
                 color: "purple",
                 showInLegend: true,
@@ -530,7 +545,7 @@ class App extends React.Component {
             for (let round in history) { //removed
                 let currentOtherPop = history[round].zombieCount + history[round].humanCount + history[round].vaccinatedCount
                 let theNumber = totalPopulation - currentOtherPop
-                theData[3].dataPoints.push({x: round, y: theNumber})
+                theData[curveNum].dataPoints.push({x: round, y: theNumber})
             }
         }
         const options = {
