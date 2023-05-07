@@ -11,10 +11,10 @@
     "node-sass": "^4.14.1",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
-    "react-scripts": "^3.4.1",
+    "react-scripts": "^5.0.1",
     "recharts": "^1.8.5",
     "sass": "^1.26.5",
-    "serve": "^11.3.0",
+    "serve": "^14.2.0",
     "typescript": "^3.9.2"
   },
   "homepage": "http://nelsong1997.github.io/zombie_game",
